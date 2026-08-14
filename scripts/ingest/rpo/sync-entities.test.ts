@@ -3,12 +3,12 @@ import { describe, it, expect, vi } from 'vitest'
 import { syncBusinessEntities } from './sync-entities'
 import type { RpoClient } from './client'
 
-function fakePrisma() {
+function fakePrisma(municipalities?: unknown[]) {
   return {
     municipality: {
-      findMany: vi.fn().mockResolvedValue([
-        { kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } },
-      ]),
+      findMany: vi.fn().mockResolvedValue(
+        municipalities ?? [{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }]
+      ),
     },
     businessEntity: { upsert: vi.fn() },
   }
@@ -48,6 +48,108 @@ describe('syncBusinessEntities', () => {
           id: 9121860n,
           ico: '50782525',
           naceKod4: '5611',
+          municipalityKod: 'SK0315510335',
+          okresKod: 'SK0315',
+          krajKod: 'SK031',
+        }),
+      })
+    )
+  })
+
+  it('attributes an entity to its CURRENT address municipality, not the search-loop municipality that found it', async () => {
+    // The live RPO search-by-municipality endpoint matches address
+    // *history*, not just the current address: an entity that used to be in
+    // municipality A but has since moved to municipality B will still show
+    // up when searching A. The sync must not attribute it to A.
+    const prisma = fakePrisma([
+      { kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }, // A - stale, search hit
+      { kod: 'SK0105529460', districtKod: 'SK0105', district: { regionKod: 'SK010' } }, // B - current
+    ])
+    const client: Partial<RpoClient> = {
+      searchByMunicipality: vi.fn((kod: string) =>
+        kod === 'SK0315510335'
+          ? Promise.resolve([
+              {
+                id: 197264,
+                identifiers: [{ value: '36407992' }],
+                fullNames: [{ value: 'GEOMATIX, s.r.o.' }],
+                addresses: [],
+              },
+            ])
+          : Promise.resolve([])
+      ),
+      getEntity: vi.fn().mockResolvedValue({
+        id: 197264,
+        identifiers: [{ value: '36407992' }],
+        fullNames: [{ value: 'GEOMATIX, s.r.o.' }],
+        addresses: [
+          // Historical address in the municipality that matched the search.
+          { municipality: { code: 'SK0315510335' }, validFrom: '2002-10-09', validTo: '2007-01-23' },
+          // Current address (no validTo) is in a different municipality.
+          { municipality: { code: 'SK0105529460' }, validFrom: '2026-08-04' },
+        ],
+      }),
+    }
+
+    await syncBusinessEntities(prisma as never, client as RpoClient)
+
+    expect(prisma.businessEntity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          municipalityKod: 'SK0105529460',
+          okresKod: 'SK0105',
+          krajKod: 'SK010',
+        }),
+      })
+    )
+  })
+
+  it('leaves geography fields unset when the current address municipality is not in the municipalities table', async () => {
+    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }])
+    const client: Partial<RpoClient> = {
+      searchByMunicipality: vi.fn().mockResolvedValue([
+        { id: 1, identifiers: [{ value: 'ICO1' }], fullNames: [{ value: 'Firm 1' }], addresses: [] },
+      ]),
+      getEntity: vi.fn().mockResolvedValue({
+        id: 1,
+        identifiers: [{ value: 'ICO1' }],
+        fullNames: [{ value: 'Firm 1' }],
+        addresses: [{ municipality: { code: 'SK9999999999' }, validFrom: '2020-01-01' }],
+      }),
+    }
+
+    await syncBusinessEntities(prisma as never, client as RpoClient)
+
+    expect(prisma.businessEntity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          municipalityKod: undefined,
+          okresKod: undefined,
+          krajKod: undefined,
+        }),
+      })
+    )
+  })
+
+  it('falls back to the search-loop municipality when the entity has no address on record at all', async () => {
+    const prisma = fakePrisma()
+    const client: Partial<RpoClient> = {
+      searchByMunicipality: vi.fn().mockResolvedValue([
+        { id: 1, identifiers: [{ value: 'ICO1' }], fullNames: [{ value: 'Firm 1' }], addresses: [] },
+      ]),
+      getEntity: vi.fn().mockResolvedValue({
+        id: 1,
+        identifiers: [{ value: 'ICO1' }],
+        fullNames: [{ value: 'Firm 1' }],
+        addresses: [],
+      }),
+    }
+
+    await syncBusinessEntities(prisma as never, client as RpoClient)
+
+    expect(prisma.businessEntity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
           municipalityKod: 'SK0315510335',
           okresKod: 'SK0315',
           krajKod: 'SK031',
