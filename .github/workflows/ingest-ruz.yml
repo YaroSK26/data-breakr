@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: '20'
       - run: npm ci
+      - run: npx prisma generate
       - run: npm run ingest:ruz
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
