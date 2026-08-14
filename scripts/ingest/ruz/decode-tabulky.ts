@@ -57,13 +57,7 @@ export function decodeFinancialFacts(
   function findValue(pattern: string): number | null {
     const row = templatePl!.riadky.find((r) => r.text.sk.includes(pattern))
     if (!row) return null
-    let idx = (row.cisloRiadku - 1) * cols
-    // Handle incomplete rows: if idx + 1 would exceed the array length,
-    // the row is incomplete (missing the second column).
-    // Use the last complete value from the previous row instead.
-    if (idx + 1 >= vykazPl!.data.length) {
-      idx = vykazPl!.data.length - 2
-    }
+    const idx = (row.cisloRiadku - 1) * cols
     return parseValue(vykazPl!.data[idx])
   }
 
