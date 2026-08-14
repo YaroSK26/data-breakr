@@ -34,7 +34,12 @@ describe('syncFirms', () => {
 
     expect(result.processed).toBe(3)
     expect(result.skipped).toBe(0)
-    expect(client.listChangedEntityIds).toHaveBeenNthCalledWith(2, '2026-08-01T00:00:00.000Z', 2)
+    // The live registeruz.sk API rejects a full ISO-8601 datetime with HTTP
+    // 400 and only accepts a bare YYYY-MM-DD date - assert the date-only
+    // format explicitly so a regression back to `since.toISOString()` (which
+    // silently passes with a mocked client) is caught here.
+    expect(client.listChangedEntityIds).toHaveBeenNthCalledWith(1, '2026-08-01', undefined)
+    expect(client.listChangedEntityIds).toHaveBeenNthCalledWith(2, '2026-08-01', 2)
     expect(prisma.firm.upsert).toHaveBeenCalledTimes(3)
     // the private entity (id 2) is stored with stav only on create, and has
     // every other field explicitly nulled out on update (it may have been

@@ -4,7 +4,9 @@ import type { RuzClient } from './client'
 import { delay } from '../http'
 
 export async function syncFirms(prisma: PrismaClient, client: RuzClient, since: Date) {
-  const sinceIso = since.toISOString()
+  // The live registeruz.sk API rejects a full ISO-8601 datetime (it returns
+  // HTTP 400) and only accepts a bare YYYY-MM-DD date for `zmenene-od`.
+  const sinceIso = since.toISOString().slice(0, 10)
   let cursor: number | undefined
   let processed = 0
   let skipped = 0

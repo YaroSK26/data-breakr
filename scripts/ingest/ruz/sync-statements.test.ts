@@ -52,6 +52,11 @@ describe('syncStatements', () => {
 
     expect(result.processed).toBe(1)
     expect(result.skipped).toBe(0)
+    // The live registeruz.sk API rejects a full ISO-8601 datetime with HTTP
+    // 400 and only accepts a bare YYYY-MM-DD date - assert the date-only
+    // format explicitly so a regression back to `since.toISOString()` (which
+    // silently passes with a mocked client) is caught here.
+    expect(client.listChangedStatementIds).toHaveBeenCalledWith('2026-08-01', undefined)
     expect(client.getVykaz).toHaveBeenCalledTimes(2)
     expect(prisma.reportTemplate.upsert).toHaveBeenCalledTimes(1)
     expect(prisma.financialStatement.upsert).toHaveBeenCalledWith(
