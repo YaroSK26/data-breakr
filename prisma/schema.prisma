@@ -1,0 +1,183 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model DataSource {
+  id            Int      @id @default(autoincrement())
+  sourceName    String   @map("source_name")
+  sourceUrl     String   @map("source_url")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  recordsCount  Int?     @map("records_count")
+  notes         String?
+
+  @@unique([sourceName])
+  @@map("data_sources")
+}
+
+model Region {
+  kod       String      @id
+  nazovSk   String      @map("nazov_sk")
+  nazovEn   String      @map("nazov_en")
+  districts District[]
+
+  @@map("regions")
+}
+
+model District {
+  kod           String         @id
+  nazovSk       String         @map("nazov_sk")
+  nazovEn       String         @map("nazov_en")
+  regionKod     String         @map("region_kod")
+  region        Region         @relation(fields: [regionKod], references: [kod])
+  municipalities Municipality[]
+
+  @@map("districts")
+}
+
+model Municipality {
+  kod             String   @id
+  nazov           String
+  districtKod     String   @map("district_kod")
+  district        District @relation(fields: [districtKod], references: [kod])
+  population      Int?
+  populationYear  Int?     @map("population_year")
+
+  @@map("municipalities")
+}
+
+model NaceCode {
+  kod5    String @id
+  kod4    String
+  nazovSk String @map("nazov_sk")
+  nazovEn String @map("nazov_en")
+
+  @@map("nace_codes")
+}
+
+model ReportTemplate {
+  idSablony    Int      @id @map("id_sablony")
+  nazov        String
+  nariadenieMf String?  @map("nariadenie_mf")
+  platneOd     DateTime? @map("platne_od")
+  raw          Json
+  fetchedAt    DateTime @default(now()) @map("fetched_at")
+
+  statements FinancialStatement[]
+
+  @@map("report_templates")
+}
+
+model Firm {
+  id                  BigInt    @id
+  ico                 String?
+  dic                 String?
+  nazov                String?
+  ulica               String?
+  mesto                String?
+  psc                  String?
+  krajKod              String?   @map("kraj_kod")
+  okresKod             String?   @map("okres_kod")
+  naceKod5             String?   @map("nace_kod5")
+  pravnaForma          String?   @map("pravna_forma")
+  velkostOrganizacie   String?   @map("velkost_organizacie")
+  datumZalozenia       DateTime? @map("datum_zalozenia")
+  datumZrusenia        DateTime? @map("datum_zrusenia")
+  stav                 String?
+  zdrojDat             String?   @map("zdroj_dat")
+  lastSyncedAt         DateTime  @default(now()) @map("last_synced_at")
+
+  statements FinancialStatement[]
+
+  @@map("firms")
+}
+
+model FinancialStatement {
+  id               BigInt    @id
+  firmId           BigInt    @map("firm_id")
+  firm             Firm      @relation(fields: [firmId], references: [id])
+  obdobieOd        DateTime? @map("obdobie_od")
+  obdobieDo        DateTime? @map("obdobie_do")
+  typ              String?
+  datumPodania     DateTime? @map("datum_podania")
+  datumSchvalenia  DateTime? @map("datum_schvalenia")
+  idSablony        Int?      @map("id_sablony")
+  reportTemplate   ReportTemplate? @relation(fields: [idSablony], references: [idSablony])
+  rawTabulky       Json?     @map("raw_tabulky")
+  pristupnostDat   String?   @map("pristupnost_dat")
+  lastSyncedAt     DateTime  @default(now()) @map("last_synced_at")
+
+  facts FinancialFacts?
+
+  @@map("financial_statements")
+}
+
+model FinancialFacts {
+  statementId           BigInt   @id @map("statement_id")
+  statement              FinancialStatement @relation(fields: [statementId], references: [id])
+  trzby                  Float?
+  naklady                Float?
+  vysledokHospodarenia   Float?   @map("vysledok_hospodarenia")
+  decodedAt              DateTime @default(now()) @map("decoded_at")
+  decodeConfidence       String   @map("decode_confidence")
+
+  @@map("financial_facts")
+}
+
+model FirmAggregate {
+  id                          Int      @id @default(autoincrement())
+  naceKod5                    String?  @map("nace_kod5")
+  regionOrDistrictKod         String   @map("region_or_district_kod")
+  granularity                 String
+  rok                         Int
+  firmCount                   Int      @map("firm_count")
+  medianTrzby                 Float?   @map("median_trzby")
+  avgTrzby                    Float?   @map("avg_trzby")
+  medianMarza                 Float?   @map("median_marza")
+  medianTrzbyNaZamestnanca    Float?   @map("median_trzby_na_zamestnanca")
+  yoyTrendPct                 Float?   @map("yoy_trend_pct")
+  computedAt                  DateTime @default(now()) @map("computed_at")
+
+  @@unique([naceKod5, regionOrDistrictKod, granularity, rok])
+  @@map("firm_aggregates_nace_region_year")
+}
+
+model BusinessEntity {
+  id              BigInt    @id
+  ico             String?
+  nazov           String?
+  ulica           String?
+  mesto           String?
+  psc             String?
+  municipalityKod String?   @map("municipality_kod")
+  okresKod        String?   @map("okres_kod")
+  krajKod         String?   @map("kraj_kod")
+  naceKod4        String?   @map("nace_kod4")
+  pravnaFormaKod  String?   @map("pravna_forma_kod")
+  datumVzniku     DateTime? @map("datum_vzniku")
+  datumZaniku     DateTime? @map("datum_zaniku")
+  zdrojDat        String?   @map("zdroj_dat")
+  lastSyncedAt    DateTime  @default(now()) @map("last_synced_at")
+
+  @@map("business_entities")
+}
+
+model BusinessDensityAgg {
+  id                        Int      @id @default(autoincrement())
+  areaKod                   String   @map("area_kod")
+  granularity                String
+  naceKod4                   String?  @map("nace_kod4")
+  snapshotDate                DateTime @map("snapshot_date")
+  pocetPrevadzok              Int      @map("pocet_prevadzok")
+  pocetNa1000Obyvatelov       Float?   @map("pocet_na_1000_obyvatelov")
+  computedAt                  DateTime @default(now()) @map("computed_at")
+
+  @@unique([areaKod, granularity, naceKod4, snapshotDate])
+  @@map("business_density_agg")
+}
