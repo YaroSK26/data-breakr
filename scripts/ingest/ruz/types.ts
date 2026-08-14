@@ -29,3 +29,33 @@ export interface IdListResponse {
   id: number[]
   existujeDalsieId: boolean
 }
+
+export interface ZavierkaDetail {
+  id: number
+  idUJ: number
+  obdobieOd?: string
+  obdobieDo?: string
+  typ?: string
+  datumPodania?: string
+  datumSchvalenia?: string
+  idUctovnychVykazov: number[]
+}
+
+export interface VykazDetail {
+  id: number
+  idSablony: number
+  pristupnostDat?: string
+  obsah?: { tabulky?: { nazov: { sk: string }; data: string[] }[] }
+}
+
+export interface SablonaDetail {
+  id: number
+  nazov: string
+  nariadenieMF?: string
+  platneOd?: string
+  tabulky: {
+    nazov: { sk: string }
+    pocetDatovychStlpcov: number
+    riadky: { cisloRiadku: number; text: { sk: string } }[]
+  }[]
+}
