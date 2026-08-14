@@ -11,7 +11,7 @@ async function main() {
 
   console.log('Syncing RPO business entities by municipality...')
   const result = await syncBusinessEntities(prisma, client)
-  console.log(`Processed ${result.processed} business entities.`)
+  console.log(`Processed ${result.processed} business entities (${result.skipped} skipped).`)
 
   console.log('Recomputing business density aggregates...')
   const densityResult = await recomputeDensity(prisma)

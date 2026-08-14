@@ -41,6 +41,7 @@ describe('syncBusinessEntities', () => {
     const result = await syncBusinessEntities(prisma as never, client as RpoClient)
 
     expect(result.processed).toBe(1)
+    expect(result.skipped).toBe(0)
     expect(prisma.businessEntity.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
@@ -53,5 +54,52 @@ describe('syncBusinessEntities', () => {
         }),
       })
     )
+  })
+
+  it('clears a cleared termination date on update instead of leaving the old value stale', async () => {
+    const client: Partial<RpoClient> = {
+      searchByMunicipality: vi.fn().mockResolvedValue([
+        { id: 1, identifiers: [{ value: 'ICO1' }], fullNames: [{ value: 'Firm 1' }], addresses: [] },
+      ]),
+      getEntity: vi.fn().mockResolvedValue({
+        id: 1,
+        identifiers: [{ value: 'ICO1' }],
+        fullNames: [{ value: 'Firm 1' }],
+        addresses: [],
+      }),
+    }
+    const prisma = fakePrisma()
+
+    await syncBusinessEntities(prisma as never, client as RpoClient)
+
+    expect(prisma.businessEntity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ datumZaniku: null }),
+      })
+    )
+  })
+
+  it('logs and skips an entity whose detail fetch fails, without aborting the rest of the batch', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const client: Partial<RpoClient> = {
+      searchByMunicipality: vi.fn().mockResolvedValue([
+        { id: 1, identifiers: [], fullNames: [], addresses: [] },
+        { id: 2, identifiers: [], fullNames: [], addresses: [] },
+      ]),
+      getEntity: vi.fn(async (id: number) => {
+        if (id === 1) throw new Error('boom')
+        return { id, identifiers: [{ value: 'ICO2' }], fullNames: [{ value: 'Firm 2' }], addresses: [] }
+      }),
+    }
+    const prisma = fakePrisma()
+
+    const result = await syncBusinessEntities(prisma as never, client as RpoClient)
+
+    expect(result.processed).toBe(1)
+    expect(result.skipped).toBe(1)
+    expect(prisma.businessEntity.upsert).toHaveBeenCalledTimes(1)
+    expect(consoleErrorSpy).toHaveBeenCalled()
+
+    consoleErrorSpy.mockRestore()
   })
 })

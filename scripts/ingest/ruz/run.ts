@@ -19,11 +19,11 @@ async function main() {
 
   console.log(`Syncing firms changed since ${since.toISOString()}...`)
   const firmsResult = await syncFirms(prisma, client, since)
-  console.log(`Processed ${firmsResult.processed} firms.`)
+  console.log(`Processed ${firmsResult.processed} firms (${firmsResult.skipped} skipped).`)
 
   console.log(`Syncing statements changed since ${since.toISOString()}...`)
   const statementsResult = await syncStatements(prisma, client, since)
-  console.log(`Processed ${statementsResult.processed} statements.`)
+  console.log(`Processed ${statementsResult.processed} statements (${statementsResult.skipped} skipped).`)
 
   console.log('Recomputing aggregates...')
   const aggResult = await recomputeAggregates(prisma)
