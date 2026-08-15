@@ -1,4 +1,4 @@
-# SK Biznis Mapa — Data Layer Design (Sub-project 1)
+# SK Biznis Mapa - Data Layer Design (Sub-project 1)
 
 Status: approved by user, 2026-08-14
 Scope: DB schema + ingestion pipeline for RÚZ and RPO. Frontend (Module A, Module B) are separate sub-projects with their own specs, built after this layer is working and tested on a pilot sample.
@@ -9,48 +9,50 @@ The full "SK Biznis Mapa" request bundles several independent pieces: data inges
 
 ## Confirmed external APIs
 
-All endpoints below were hit live on 2026-08-14 — nothing here is assumed from documentation alone.
+All endpoints below were hit live on 2026-08-14 - nothing here is assumed from documentation alone.
 
-### RÚZ Open API — `https://registeruz.sk/cruz-public/api` (no auth, public)
+### RÚZ Open API - `https://registeruz.sk/cruz-public/api` (no auth, public)
 
-| Endpoint | Purpose | Confirmed fields |
-|---|---|---|
-| `GET /uctovne-jednotky?zmenene-od=YYYY-MM-DD&max-zaznamov=N&pokracovat-za-id=ID` | List changed/new entity IDs, cursor-paginated | `{"id":[...], "existujeDalsieId": bool}` |
-| `GET /uctovna-jednotka?id=ID` | Entity detail | `ico, dic, nazovUJ, mesto, ulica, psc, kraj, okres, skNace (5-digit), pravnaForma, velkostOrganizacie, datumZalozenia, datumZrusenia, sidlo, zdrojDat, konsolidovana, stav (present as "NEVEREJNÁ" when private, "ZMAZANÉ" when deleted), idUctovnychZavierok[]` |
-| `GET /uctovne-zavierky?zmenene-od=...` | List changed statement IDs | same id-list shape |
-| `GET /uctovna-zavierka?id=ID` | Statement detail | `idUJ, obdobieOd, obdobieDo, typ, datumPodania, datumSchvalenia, datumZostavenia, idUctovnychVykazov[]` (array of 2 report ids) |
-| `GET /uctovny-vykaz?id=ID` | Report detail | Either PDF-only (`prilohy[]`, no numbers) or structured: `obsah.tabulky[]` — each table is `{nazov, data: [string,...]}`, a **flat positional array of numbers as strings, no field names**. Also carries `idSablony` (template id) and `pristupnostDat` ("Verejné" required to use). |
-| `GET /sablona?id=ID` | Report template | Decodes `tabulky` positions: `tabulky[].hlavicka[]` (column headers with `riadok`/`stlpec` position) and `tabulky[].riadky[]` (row labels with `cisloRiadku`, `oznacenie` e.g. "A.I."). `pocetDatovychStlpcov` tells how many data columns per row. This is the only way to know which array position is "Tržby", which is "Výsledok hospodárenia", etc. — templates differ by entity size/type (e.g. `idSablony=687` is "Úč MUJ", the micro-entity template). |
-| `GET /kraje`, `/okresy`, `/sidla`, `/sk-nace`, `/pravne-formy`, `/velkosti-organizacie` | Classifiers, no pagination | `{"klasifikacie":[{"kod":"...", "nazov":{"sk":"...","en":"..."}}]}` (regions/districts use `"lokacie"` key instead) |
+| Endpoint                                                                                | Purpose                                       | Confirmed fields                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /uctovne-jednotky?zmenene-od=YYYY-MM-DD&max-zaznamov=N&pokracovat-za-id=ID`        | List changed/new entity IDs, cursor-paginated | `{"id":[...], "existujeDalsieId": bool}`                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `GET /uctovna-jednotka?id=ID`                                                           | Entity detail                                 | `ico, dic, nazovUJ, mesto, ulica, psc, kraj, okres, skNace (5-digit), pravnaForma, velkostOrganizacie, datumZalozenia, datumZrusenia, sidlo, zdrojDat, konsolidovana, stav (present as "NEVEREJNÁ" when private, "ZMAZANÉ" when deleted), idUctovnychZavierok[]`                                                                                                                                                                                               |
+| `GET /uctovne-zavierky?zmenene-od=...`                                                  | List changed statement IDs                    | same id-list shape                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `GET /uctovna-zavierka?id=ID`                                                           | Statement detail                              | `idUJ, obdobieOd, obdobieDo, typ, datumPodania, datumSchvalenia, datumZostavenia, idUctovnychVykazov[]` (array of 2 report ids)                                                                                                                                                                                                                                                                                                                                |
+| `GET /uctovny-vykaz?id=ID`                                                              | Report detail                                 | Either PDF-only (`prilohy[]`, no numbers) or structured: `obsah.tabulky[]` - each table is `{nazov, data: [string,...]}`, a **flat positional array of numbers as strings, no field names**. Also carries `idSablony` (template id) and `pristupnostDat` ("Verejné" required to use).                                                                                                                                                                          |
+| `GET /sablona?id=ID`                                                                    | Report template                               | Decodes `tabulky` positions: `tabulky[].hlavicka[]` (column headers with `riadok`/`stlpec` position) and `tabulky[].riadky[]` (row labels with `cisloRiadku`, `oznacenie` e.g. "A.I."). `pocetDatovychStlpcov` tells how many data columns per row. This is the only way to know which array position is "Tržby", which is "Výsledok hospodárenia", etc. - templates differ by entity size/type (e.g. `idSablony=687` is "Úč MUJ", the micro-entity template). |
+| `GET /kraje`, `/okresy`, `/sidla`, `/sk-nace`, `/pravne-formy`, `/velkosti-organizacie` | Classifiers, no pagination                    | `{"klasifikacie":[{"kod":"...", "nazov":{"sk":"...","en":"..."}}]}` (regions/districts use `"lokacie"` key instead)                                                                                                                                                                                                                                                                                                                                            |
 
 Key implications:
-- Numbers are meaningless without the matching template — ingestion must resolve `idSablony` → cached template before any line item can be decoded.
-- Many entities return only `{"id":..., "stav":"NEVEREJNÁ", "datumPoslednejUpravy":...}` — no usable data. These must be recorded (so we don't refetch) but skipped for financial content.
+
+- Numbers are meaningless without the matching template - ingestion must resolve `idSablony` → cached template before any line item can be decoded.
+- Many entities return only `{"id":..., "stav":"NEVEREJNÁ", "datumPoslednejUpravy":...}` - no usable data. These must be recorded (so we don't refetch) but skipped for financial content.
 - `skNace` here is **5-digit**.
 
-### RPO (Register právnických osôb) — `https://api.statistics.sk/rpo/v1` (no auth, public)
+### RPO (Register právnických osôb) - `https://api.statistics.sk/rpo/v1` (no auth, public)
 
 Note: the spec originally pointed at "Slovensko.Digital Ekosystém" (`ekosystem.slovensko.digital`) for RPO access. That redirects to `datahub.ekosystem.slovensko.digital`, whose API docs are not published/discoverable, and its `/api/rpo/detail` route 404s. The actual working public RPO API is run by Štatistický úrad SR directly at `api.statistics.sk/rpo/v1`. Use this instead.
 
-| Endpoint | Purpose | Confirmed fields |
-|---|---|---|
-| `GET /search?identifier=ICO` | Search by IČO | `results[]`, each with `id` (internal RPO id, needed for detail calls), `identifiers[]` (IČO history), `fullNames[]` (name history), `addresses[]` (history, each with `municipality.code`), `establishment`, `sourceRegister` |
-| `GET /search?fullName=TEXT` | Search by name (substring) | same shape |
-| `GET /search?addressMunicipality=MUNICIPALITY_CODE` | **Bulk list by municipality** — this is the endpoint Module B ingestion uses to enumerate all entities in a district, not name search | same shape, multiple results |
-| `GET /entity/{internalId}` | Full entity detail (fetch after search) | Adds `legalForms[]`, `activities[]` (free-text trade-license descriptions, not NACE), `statutoryBodies[]`, `stakeholders[]`, `otherLegalFacts`, `authorizations`, `equities`, `deposits`, and critically **`statisticalCodes.mainActivity`**: `{value, code, codelistCode}` — a **4-digit** NACE-family code (e.g. `"5611"` for "Reštauračné činnosti"). This is the field Module B uses for category filtering. |
+| Endpoint                                            | Purpose                                                                                                                               | Confirmed fields                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /search?identifier=ICO`                        | Search by IČO                                                                                                                         | `results[]`, each with `id` (internal RPO id, needed for detail calls), `identifiers[]` (IČO history), `fullNames[]` (name history), `addresses[]` (history, each with `municipality.code`), `establishment`, `sourceRegister`                                                                                                                                                                                   |
+| `GET /search?fullName=TEXT`                         | Search by name (substring)                                                                                                            | same shape                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `GET /search?addressMunicipality=MUNICIPALITY_CODE` | **Bulk list by municipality** - this is the endpoint Module B ingestion uses to enumerate all entities in a district, not name search | same shape, multiple results                                                                                                                                                                                                                                                                                                                                                                                     |
+| `GET /entity/{internalId}`                          | Full entity detail (fetch after search)                                                                                               | Adds `legalForms[]`, `activities[]` (free-text trade-license descriptions, not NACE), `statutoryBodies[]`, `stakeholders[]`, `otherLegalFacts`, `authorizations`, `equities`, `deposits`, and critically **`statisticalCodes.mainActivity`**: `{value, code, codelistCode}` - a **4-digit** NACE-family code (e.g. `"5611"` for "Reštauračné činnosti"). This is the field Module B uses for category filtering. |
 
 Key implications:
-- No documented rate limit — ingestion must self-throttle conservatively regardless.
+
+- No documented rate limit - ingestion must self-throttle conservatively regardless.
 - Municipality code format matches RÚZ's `sidlo`/`okres`/`kraj` codes (e.g. `SK0315510335`), so district/region derivation from municipality is a lookup, not a separate fetch.
 - **NACE granularity mismatch**: RÚZ gives 5-digit, RPO gives 4-digit. Resolved (user decision): store RÚZ's native 5-digit code for display, plus a generated 4-digit column for joining against RPO. Module B operates at 4-digit granularity; Module A can show extra precision when a user drills into one NACE code.
-- `termination` field present/absent on statutory records indicates active vs. dissolved — no separate "is active" flag needed.
+- `termination` field present/absent on statutory records indicates active vs. dissolved - no separate "is active" flag needed.
 
-### Not yet verified — explicit open items, deferred to the Module B sub-project
+### Not yet verified - explicit open items, deferred to the Module B sub-project
 
 Per the project's instruction not to assume API structure, these are **not designed against real responses yet** and must be verified before Module B ingestion is built:
 
-1. **ŠÚ SR population by obec/okres** (DATAcube or other access method) — exact endpoint/format unconfirmed.
-2. **GeoJSON district/municipality boundaries** — no source has been tested (ŠÚ SR geoportál / OSM / Eurostat NUTS-LAU all mentioned as candidates in the original brief, none verified).
+1. **ŠÚ SR population by obec/okres** (DATAcube or other access method) - exact endpoint/format unconfirmed.
+2. **GeoJSON district/municipality boundaries** - no source has been tested (ŠÚ SR geoportál / OSM / Eurostat NUTS-LAU all mentioned as candidates in the original brief, none verified).
 
 Do not build `municipalities.population` ingestion or the map rendering layer until these are confirmed the same way RÚZ/RPO were confirmed above.
 
@@ -136,7 +138,7 @@ financial_facts (decoded line items, one row per statement)
   vysledok_hospodarenia numeric  -- profit/loss
   marza           numeric     -- generated: vysledok_hospodarenia / nullif(trzby,0)
   decoded_at      timestamptz
-  decode_confidence text      -- 'matched' | 'template_unmapped' — surfaces gaps instead of hiding them
+  decode_confidence text      -- 'matched' | 'template_unmapped' - surfaces gaps instead of hiding them
 
 firm_aggregates_nace_region_year (Module A precomputed)
   id              serial pk
@@ -187,22 +189,24 @@ Every user-facing table above traces back to a `data_sources` row via `source_na
 Location: `/scripts/ingest/`, run by GitHub Actions cron, connecting directly to Supabase Postgres (not through the Next.js app).
 
 **`ingest-ruz.ts`** (daily)
+
 1. Read cursor (`last_synced_at` from `data_sources` row for RÚZ, or a dedicated cursor if `zmenene-od` needs finer granularity than a timestamp allows).
-2. Page through `/uctovne-jednotky?zmenene-od=cursor`, upsert into `firms`. For `stav = NEVEREJNÁ` or `ZMAZANÉ`, store the row with nulls elsewhere and stop — no further fetches for that id.
+2. Page through `/uctovne-jednotky?zmenene-od=cursor`, upsert into `firms`. For `stav = NEVEREJNÁ` or `ZMAZANÉ`, store the row with nulls elsewhere and stop - no further fetches for that id.
 3. Page through `/uctovne-zavierky?zmenene-od=cursor` for changed statements, upsert `financial_statements`.
-4. For each new/changed statement, fetch both linked `uctovny-vykaz` ids. The one with `obsah.tabulky` is structured — store its `raw_tabulky` and `idSablony`. If `idSablony` not yet in `report_templates`, fetch `/sablona?id=` once and cache.
-5. Decode `financial_facts` from `raw_tabulky` using the template's row labels (match on row text containing "Tržby z predaja" for revenue, "Výsledok hospodárenia" for profit — exact label patterns to be finalized against real samples during the pilot run below). Set `decode_confidence = 'template_unmapped'` rather than guessing when a template's labels don't match known patterns, so gaps are visible in the data rather than silently wrong.
+4. For each new/changed statement, fetch both linked `uctovny-vykaz` ids. The one with `obsah.tabulky` is structured - store its `raw_tabulky` and `idSablony`. If `idSablony` not yet in `report_templates`, fetch `/sablona?id=` once and cache.
+5. Decode `financial_facts` from `raw_tabulky` using the template's row labels (match on row text containing "Tržby z predaja" for revenue, "Výsledok hospodárenia" for profit - exact label patterns to be finalized against real samples during the pilot run below). Set `decode_confidence = 'template_unmapped'` rather than guessing when a template's labels don't match known patterns, so gaps are visible in the data rather than silently wrong.
 6. Recompute `firm_aggregates_nace_region_year` for touched (nace, region, year) combinations.
 7. Update `data_sources` row: `last_synced_at`, `records_count`.
 
 **`ingest-rpo.ts`** (daily or weekly)
+
 1. Iterate `municipalities` table (seeded from RÚZ's `/sidla`).
 2. For each municipality, `GET /search?addressMunicipality=code`, upsert into `business_entities`. Derive `okres_kod`/`kraj_kod` from the municipality lookup, not a separate API call.
 3. Self-throttle (fixed delay + exponential backoff on errors) since no rate limit is documented.
 4. Recompute `business_density_agg` for touched areas.
 5. Update `data_sources` row.
 
-**`ingest-population.ts`** (monthly, manual-trigger acceptable) — blocked on confirming the ŠÚ SR access method; not built in this sub-project.
+**`ingest-population.ts`** (monthly, manual-trigger acceptable) - blocked on confirming the ŠÚ SR access method; not built in this sub-project.
 
 **Error handling**: retry with backoff on 5xx/timeout; a single record's persistent failure is logged and skipped, not fatal to the run. The GitHub Actions job only fails loudly on a total run failure (e.g., can't reach the API at all, can't connect to DB).
 
@@ -222,4 +226,4 @@ Only after this pilot passes does ingestion scale to the full national dataset.
 
 ## Standing rule for future data sections
 
-Recorded here per the project's own requirement: every new data-backed section added to the app in the future must follow the same pattern established here — a visible source + last-updated date (via `data_sources`, not hardcoded) and, if the data has known coverage limits (like RÚZ's under-representation of sole traders), a visually prominent — not small-print — explanation of that limit next to the data itself. This rule belongs in the project's `CLAUDE.md` once the repo has one.
+Recorded here per the project's own requirement: every new data-backed section added to the app in the future must follow the same pattern established here - a visible source + last-updated date (via `data_sources`, not hardcoded) and, if the data has known coverage limits (like RÚZ's under-representation of sole traders), a visually prominent - not small-print - explanation of that limit next to the data itself. This rule belongs in the project's `CLAUDE.md` once the repo has one.

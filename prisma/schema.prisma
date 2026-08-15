@@ -36,6 +36,7 @@ model District {
   regionKod     String         @map("region_kod")
   region        Region         @relation(fields: [regionKod], references: [kod])
   municipalities Municipality[]
+  geometry      Json?
 
   @@map("districts")
 }

@@ -54,6 +54,17 @@ interface DensityMapProps {
 
 export function DensityMap({ data, metric, onDistrictClick }: DensityMapProps) {
   const [hovered, setHovered] = useState<MunicipalityProps | null>(null)
+  const [districtBoundaries, setDistrictBoundaries] = useState<FeatureCollection | null>(null)
+
+  // District outlines don't depend on the category/metric filter, so
+  // they're fetched once on mount rather than refetched alongside the
+  // density data on every filter change.
+  useEffect(() => {
+    fetch('/api/district-boundaries')
+      .then((r) => r.json())
+      .then((d) => setDistrictBoundaries(d))
+      .catch(() => setDistrictBoundaries(null))
+  }, [])
 
   const maxValue = useMemo(() => {
     if (!data) return 0
@@ -103,6 +114,16 @@ export function DensityMap({ data, metric, onDistrictClick }: DensityMapProps) {
             data={data}
             style={style as StyleFunction}
             onEachFeature={onEachFeature as (feature: Feature, layer: Layer) => void}
+          />
+        )}
+        {districtBoundaries && (
+          <GeoJSON
+            data={districtBoundaries}
+            // Decoration only, drawn on top of the municipality fill layer -
+            // no fill of its own, and non-interactive so clicks pass through
+            // to the municipality polygon underneath (the actual click
+            // handler for the drill-down list).
+            style={() => ({ fill: false, color: '#475569', weight: 1.8, interactive: false })}
           />
         )}
         <FitToData data={data} />

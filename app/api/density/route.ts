@@ -3,23 +3,23 @@
 // Serves municipality-level GeoJSON polygons colored by district-level
 // business density. Rendering granularity is "obec" (municipality, ~2900
 // polygons, from Eurostat GISCO LAU data) but the DATA value shown is
-// computed live at "okres" (district) granularity from business_entities —
+// computed live at "okres" (district) granularity from business_entities -
 // every municipality within a district shows the same count/ratio. This
 // avoids needing district-boundary polygons (not available from any
 // EU-harmonized source) while still satisfying the spec's "okresy, prípadne
 // obce pri dostatočnom detaile" requirement: district-level values, at
 // municipality-level render detail.
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 interface DensityRow {
-  okresKod: string
-  pocet: bigint
-  population: number | null
+  okresKod: string;
+  pocet: bigint;
+  population: number | null;
 }
 
 export async function GET(req: NextRequest) {
-  const naceKod4 = req.nextUrl.searchParams.get('nace')
+  const naceKod4 = req.nextUrl.searchParams.get("nace");
 
   const rows = naceKod4
     ? await prisma.$queryRaw<DensityRow[]>`
@@ -49,19 +49,19 @@ export async function GET(req: NextRequest) {
         ) dp ON dp.district_kod = be."okres_kod"
         WHERE be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
         GROUP BY be."okres_kod"
-      `
+      `;
 
   const byDistrict = new Map<
     string,
     { pocetPrevadzok: number; pocetNa1000Obyvatelov: number | null }
-  >()
+  >();
   for (const row of rows) {
-    const pocet = Number(row.pocet)
-    const population = row.population ? Number(row.population) : null
+    const pocet = Number(row.pocet);
+    const population = row.population ? Number(row.population) : null;
     byDistrict.set(row.okresKod, {
       pocetPrevadzok: pocet,
       pocetNa1000Obyvatelov: population ? (pocet / population) * 1000 : null,
-    })
+    });
   }
 
   const municipalities = await prisma.municipality.findMany({
@@ -74,14 +74,14 @@ export async function GET(req: NextRequest) {
       geometry: true,
       district: { select: { nazovSk: true } },
     },
-  })
+  });
 
   const features = municipalities
     .filter((m) => m.geometry !== null)
     .map((m) => {
-      const density = byDistrict.get(m.districtKod)
+      const density = byDistrict.get(m.districtKod);
       return {
-        type: 'Feature' as const,
+        type: "Feature" as const,
         geometry: m.geometry,
         properties: {
           kod: m.kod,
@@ -92,11 +92,11 @@ export async function GET(req: NextRequest) {
           pocetPrevadzok: density?.pocetPrevadzok ?? 0,
           pocetNa1000Obyvatelov: density?.pocetNa1000Obyvatelov ?? null,
         },
-      }
-    })
+      };
+    });
 
   return NextResponse.json({
-    type: 'FeatureCollection',
+    type: "FeatureCollection",
     features,
-  })
+  });
 }
