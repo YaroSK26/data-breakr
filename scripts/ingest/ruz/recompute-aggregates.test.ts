@@ -3,6 +3,27 @@ import { describe, it, expect, vi } from 'vitest'
 import { recomputeAggregates } from './recompute-aggregates'
 
 describe('recomputeAggregates', () => {
+  it('handles Postgres returning NULL (not []) for array_agg when every row in the group has a null trzby', async () => {
+    // Real production behavior: array_agg(...) FILTER (WHERE trzby IS NOT NULL)
+    // returns SQL NULL, not an empty array, when the filter excludes every row
+    // in the group - e.g. a nace/okres/year where every statement has
+    // decode_confidence='template_unmapped'. This must not throw.
+    const prisma = {
+      $queryRaw: vi.fn().mockResolvedValue([
+        { naceKod5: '56101', okresKod: 'SK0109', rok: 2023, firmCount: 6n, trzbyValues: null, vysledokValues: null },
+      ]),
+      firmAggregate: { upsert: vi.fn() },
+    }
+
+    await expect(recomputeAggregates(prisma as never)).resolves.not.toThrow()
+
+    const call = prisma.firmAggregate.upsert.mock.calls[0]
+    expect(call[0].create.firmCount).toBe(6)
+    expect(call[0].create.medianTrzby).toBeNull()
+    expect(call[0].create.avgTrzby).toBeNull()
+    expect(call[0].create.medianMarza).toBeNull()
+  })
+
   it('nulls value columns when firm_count is below 5, keeps them when at or above 5', async () => {
     const prisma = {
       $queryRaw: vi.fn().mockResolvedValue([

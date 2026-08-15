@@ -8,8 +8,8 @@ interface RawGroup {
   okresKod: string
   rok: number
   firmCount: bigint
-  trzbyValues: number[]
-  vysledokValues: (number | null)[]
+  trzbyValues: number[] | null
+  vysledokValues: (number | null)[] | null
 }
 
 function median(values: number[]): number {
@@ -56,16 +56,23 @@ export async function recomputeAggregates(prisma: PrismaClient) {
   for (const g of groups) {
     const firmCount = Number(g.firmCount)
     const belowThreshold = firmCount < ANONYMITY_THRESHOLD
-    const hasValues = g.trzbyValues.length > 0
+    // Postgres's array_agg(...) FILTER (...) returns SQL NULL, not an
+    // empty array, when the filter excludes every row in the group (e.g.
+    // every statement in this nace/okres/year has an undecoded trzby).
+    // Real production data hits this constantly - most financial_facts
+    // rows currently have decode_confidence='template_unmapped'.
+    const trzbyValues = g.trzbyValues ?? []
+    const vysledokValues = g.vysledokValues ?? []
+    const hasValues = trzbyValues.length > 0
 
-    const medianTrzby = belowThreshold || !hasValues ? null : median(g.trzbyValues)
-    const avgTrzby = belowThreshold || !hasValues ? null : average(g.trzbyValues)
+    const medianTrzby = belowThreshold || !hasValues ? null : median(trzbyValues)
+    const avgTrzby = belowThreshold || !hasValues ? null : average(trzbyValues)
 
     const marzaValues: number[] = []
     if (!belowThreshold) {
-      for (let i = 0; i < g.trzbyValues.length; i++) {
-        const trzby = g.trzbyValues[i]
-        const vysledok = g.vysledokValues[i]
+      for (let i = 0; i < trzbyValues.length; i++) {
+        const trzby = trzbyValues[i]
+        const vysledok = vysledokValues[i]
         if (trzby && vysledok !== null && vysledok !== undefined) {
           marzaValues.push(vysledok / trzby)
         }
