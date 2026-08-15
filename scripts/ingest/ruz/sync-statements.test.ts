@@ -69,6 +69,62 @@ describe('syncStatements', () => {
         create: expect.objectContaining({ statementId: 4847452n, trzby: 12000 }),
       })
     )
+    // Regression guard for the FK-ordering bug: report_templates.id_sablony
+    // is referenced by financial_statements.id_sablony as a foreign key, so
+    // the template row must exist before the statement upsert runs - not
+    // after. Assert the actual call order, not just that both were called.
+    const templateUpsertOrder = prisma.reportTemplate.upsert.mock.invocationCallOrder[0]
+    const statementUpsertOrder = prisma.financialStatement.upsert.mock.invocationCallOrder[0]
+    expect(templateUpsertOrder).toBeLessThan(statementUpsertOrder)
+  })
+
+  it('ensures a brand-new report_template exists before upserting the financial_statement that references it (FK-ordering regression)', async () => {
+    // Mirrors the exact scenario that caused a live P2003 foreign key
+    // violation: a statement whose idSablony has never been seen before (so
+    // report_templates has no row for it yet). If the statement upsert ever
+    // runs before the template is ensured, this is the bug.
+    const client: Partial<RuzClient> = {
+      listChangedStatementIds: vi.fn().mockResolvedValueOnce({ ids: [555], hasMore: false }),
+      getStatement: vi.fn().mockResolvedValue({
+        id: 555,
+        idUJ: 9,
+        idUctovnychVykazov: [777],
+      }),
+      getVykaz: vi.fn().mockResolvedValue({
+        id: 777,
+        idSablony: 999, // brand new template id
+        pristupnostDat: 'Verejné',
+        obsah: { tabulky: [{ nazov: { sk: 'Výkaz ziskov a strát' }, data: ['5000'] }] },
+      }),
+      getSablona: vi.fn().mockResolvedValue({
+        id: 999,
+        nazov: 'Nová šablóna',
+        tabulky: [
+          {
+            nazov: { sk: 'Výkaz ziskov a strát' },
+            pocetDatovychStlpcov: 1,
+            riadky: [{ cisloRiadku: 1, text: { sk: 'Výnosy z hospodárskej činnosti spolu' } }],
+          },
+        ],
+      }),
+    }
+    const prisma = fakePrisma() // reportTemplate.findUnique resolves null - template genuinely doesn't exist yet
+
+    await syncStatements(prisma as never, client as RuzClient, new Date('2026-08-01'))
+
+    expect(prisma.reportTemplate.upsert).toHaveBeenCalledTimes(1)
+    expect(prisma.financialStatement.upsert).toHaveBeenCalledTimes(1)
+
+    const templateUpsertOrder = prisma.reportTemplate.upsert.mock.invocationCallOrder[0]
+    const statementUpsertOrder = prisma.financialStatement.upsert.mock.invocationCallOrder[0]
+    expect(templateUpsertOrder).toBeLessThan(statementUpsertOrder)
+
+    // The statement must carry the now-ensured idSablony, not omit it.
+    expect(prisma.financialStatement.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ id: 555n, idSablony: 999 }),
+      })
+    )
   })
 
   it('clears a fact that now decodes to null on update instead of leaving the stale value in place', async () => {
@@ -130,6 +186,15 @@ describe('syncStatements', () => {
     expect(prisma.financialStatement.upsert).toHaveBeenCalledTimes(1)
     expect(prisma.financialFacts.upsert).not.toHaveBeenCalled()
     expect(client.getSablona).not.toHaveBeenCalled()
+    // Non-public statements never go through the template-ensure gate, so
+    // idSablony must not be set to a template we never confirmed exists -
+    // that's exactly the FK-violation-shaped bug this is guarding against.
+    expect(prisma.reportTemplate.upsert).not.toHaveBeenCalled()
+    expect(prisma.financialStatement.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ idSablony: undefined }),
+      })
+    )
   })
 
   it('logs and skips a statement whose detail fetch fails, without aborting the rest of the batch', async () => {

@@ -28,34 +28,23 @@ export async function syncStatements(prisma: PrismaClient, client: RuzClient, si
           }
         }
 
-        await prisma.financialStatement.upsert({
-          where: { id: BigInt(statement.id) },
-          create: {
-            id: BigInt(statement.id),
-            firmId: BigInt(statement.idUJ),
-            obdobieOd: statement.obdobieOd ? new Date(statement.obdobieOd) : undefined,
-            obdobieDo: statement.obdobieDo ? new Date(statement.obdobieDo) : undefined,
-            typ: statement.typ,
-            idSablony: structuredVykaz?.idSablony,
-            rawTabulky: structuredVykaz?.obsah?.tabulky ?? undefined,
-            pristupnostDat: structuredVykaz?.pristupnostDat,
-          },
-          update: {
-            idSablony: structuredVykaz?.idSablony,
-            rawTabulky: structuredVykaz?.obsah?.tabulky ?? undefined,
-            pristupnostDat: structuredVykaz?.pristupnostDat,
-          },
-        })
+        // The report_templates row referenced by financial_statements.id_sablony
+        // (a foreign key) must exist BEFORE we upsert the statement that points
+        // to it - ensuring the template only *after* upserting the statement
+        // guarantees a foreign key violation on any id_sablony not already in
+        // the table (which, for a fresh database, is every one of them).
+        // Ensure the template first, under the same gate that used to guard
+        // the decode step, and only carry idSablony onto the statement when
+        // we actually managed to ensure it.
+        let template: { idSablony: number; nazov: string; raw: unknown } | null = null
+        let templateEnsured = false
 
-        // Only decode and store financial_facts when the source marks the
-        // underlying data as public ("Verejné"). The financial_statements row
-        // is still tracked above regardless of accessibility.
         if (
           structuredVykaz?.obsah?.tabulky &&
           structuredVykaz.idSablony &&
           structuredVykaz.pristupnostDat === 'Verejné'
         ) {
-          let template = await prisma.reportTemplate.findUnique({
+          template = await prisma.reportTemplate.findUnique({
             where: { idSablony: structuredVykaz.idSablony },
           })
           if (!template) {
@@ -67,10 +56,48 @@ export async function syncStatements(prisma: PrismaClient, client: RuzClient, si
             })
             template = { idSablony: sablona.id, nazov: sablona.nazov, raw: sablona } as never
           }
+          templateEnsured = true
+        }
 
+        // Only carry idSablony onto the statement once its template row is
+        // confirmed to exist - never point the FK at a template we didn't
+        // actually ensure this pass.
+        const confirmedIdSablony = templateEnsured ? structuredVykaz!.idSablony : undefined
+
+        await prisma.financialStatement.upsert({
+          where: { id: BigInt(statement.id) },
+          create: {
+            id: BigInt(statement.id),
+            firmId: BigInt(statement.idUJ),
+            obdobieOd: statement.obdobieOd ? new Date(statement.obdobieOd) : undefined,
+            obdobieDo: statement.obdobieDo ? new Date(statement.obdobieDo) : undefined,
+            typ: statement.typ,
+            idSablony: confirmedIdSablony,
+            rawTabulky: structuredVykaz?.obsah?.tabulky ?? undefined,
+            pristupnostDat: structuredVykaz?.pristupnostDat,
+          },
+          update: {
+            // A statement that previously had a confirmed template but this
+            // time doesn't (e.g. it's no longer public, or the structured
+            // vykaz is gone) must not keep pointing at the old, now-unverified
+            // idSablony - clear it explicitly rather than silently leaving a
+            // stale FK in place (same `?? null` reasoning as the other
+            // stale-value fixes in this file: a value that can no longer be
+            // confirmed must actively clear, not just skip being set).
+            idSablony: confirmedIdSablony ?? null,
+            rawTabulky: structuredVykaz?.obsah?.tabulky ?? undefined,
+            pristupnostDat: structuredVykaz?.pristupnostDat,
+          },
+        })
+
+        // Only decode and store financial_facts when the source marks the
+        // underlying data as public ("Verejné"). The financial_statements row
+        // is still tracked above regardless of accessibility. Reuses the
+        // template ensured above instead of looking it up again.
+        if (templateEnsured) {
           const rawTemplate = (template as unknown as { raw: { tabulky: unknown[] } }).raw
           const decoded = decodeFinancialFacts(
-            structuredVykaz.obsah.tabulky,
+            structuredVykaz!.obsah!.tabulky!,
             rawTemplate.tabulky as Parameters<typeof decodeFinancialFacts>[1]
           )
 
