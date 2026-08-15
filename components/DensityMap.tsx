@@ -46,7 +46,13 @@ function FitToData({ data }: { data: FeatureCollection | null }) {
   return null
 }
 
-export function DensityMap({ data, metric }: { data: FeatureCollection | null; metric: Metric }) {
+interface DensityMapProps {
+  data: FeatureCollection | null
+  metric: Metric
+  onDistrictClick?: (okresKod: string, okresNazov: string) => void
+}
+
+export function DensityMap({ data, metric, onDistrictClick }: DensityMapProps) {
   const [hovered, setHovered] = useState<MunicipalityProps | null>(null)
 
   const maxValue = useMemo(() => {
@@ -75,6 +81,7 @@ export function DensityMap({ data, metric }: { data: FeatureCollection | null; m
     layer.on({
       mouseover: () => setHovered(feature.properties),
       mouseout: () => setHovered(null),
+      click: () => onDistrictClick?.(feature.properties.okresKod, feature.properties.okresNazov),
     })
   }
 
@@ -129,6 +136,7 @@ export function DensityMap({ data, metric }: { data: FeatureCollection | null; m
                 : 'chýbajú dáta o populácii'}
             </strong>
           </div>
+          <div style={{ marginTop: 6, fontSize: 12, color: '#94a3b8' }}>Klikni pre zoznam firiem v okrese →</div>
         </div>
       )}
     </div>

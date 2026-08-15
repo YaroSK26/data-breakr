@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { DataSourceBanner } from '@/components/DataSourceBanner'
+import { FirmListPanel } from '@/components/FirmListPanel'
 import type { Metric } from '@/components/DensityMap'
 import type { FeatureCollection } from 'geojson'
 
@@ -48,6 +48,7 @@ function MapaHustotyFiriem() {
   const [sources, setSources] = useState<DataSource[]>([])
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedDistrict, setSelectedDistrict] = useState<{ kod: string; nazov: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/categories')
@@ -88,14 +89,9 @@ function MapaHustotyFiriem() {
       }}
     >
       <header style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>SK Biznis Mapa</h1>
-          <Link href="/benchmark" style={{ fontSize: 13, color: '#2563eb' }}>
-            finančný benchmark odvetví →
-          </Link>
-        </div>
-        <p style={{ color: '#64748b', margin: '4px 0 0' }}>
-          Mapa hustoty firiem a živnostníkov na Slovensku podľa okresu a kategórie.
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Mapa hustoty firiem</h1>
+        <p style={{ color: '#64748b', margin: '4px 0 0', fontSize: 14 }}>
+          Hustota firiem a živnostníkov na Slovensku podľa okresu a kategórie.
         </p>
       </header>
 
@@ -107,8 +103,10 @@ function MapaHustotyFiriem() {
           alignItems: 'flex-end',
           marginBottom: 16,
           padding: 16,
+          background: 'white',
           border: '1px solid #e2e8f0',
-          borderRadius: 8,
+          borderRadius: 10,
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
         }}
       >
         <div>
@@ -164,11 +162,35 @@ function MapaHustotyFiriem() {
         {loading && <span style={{ color: '#94a3b8', fontSize: 13 }}>Načítavam…</span>}
       </section>
 
-      <DensityMap data={geoData} metric={metricParam === 'absolute' ? 'absolute' : 'perCapita'} />
+      <div
+        style={{
+          background: 'white',
+          border: '1px solid #e2e8f0',
+          borderRadius: 10,
+          padding: 8,
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+        }}
+      >
+        <DensityMap
+          data={geoData}
+          metric={metricParam === 'absolute' ? 'absolute' : 'perCapita'}
+          onDistrictClick={(kod, nazov) => setSelectedDistrict({ kod, nazov })}
+        />
+      </div>
 
       <div style={{ marginTop: 16 }}>
         <DataSourceBanner sources={sources} />
       </div>
+
+      {selectedDistrict && (
+        <FirmListPanel
+          okresKod={selectedDistrict.kod}
+          okresNazov={selectedDistrict.nazov}
+          naceFilter={naceParam}
+          categories={categories}
+          onClose={() => setSelectedDistrict(null)}
+        />
+      )}
     </main>
   )
 }

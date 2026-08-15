@@ -1,7 +1,6 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { DataSourceBanner } from '@/components/DataSourceBanner'
 
@@ -69,7 +68,7 @@ function FinancnyBenchmark() {
       .then((d) => setNaceCodes(d.codes))
       .catch(() => setNaceCodes([]))
 
-    fetch('/api/districts')
+    fetch('/api/districts?onlyWithBenchmarkData=true')
       .then((r) => r.json())
       .then((d) => setDistricts(d.districts))
       .catch(() => setDistricts([]))
@@ -112,13 +111,8 @@ function FinancnyBenchmark() {
       }}
     >
       <header style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>Finančný benchmark odvetví</h1>
-          <Link href="/" style={{ fontSize: 13, color: '#2563eb' }}>
-            ← mapa hustoty firiem
-          </Link>
-        </div>
-        <p style={{ color: '#64748b', margin: '4px 0 0' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Finančný benchmark odvetví</h1>
+        <p style={{ color: '#64748b', margin: '4px 0 0', fontSize: 14 }}>
           Medián tržieb, marže a medziročný trend podľa NACE kódu a okresu.
         </p>
       </header>
@@ -153,8 +147,10 @@ function FinancnyBenchmark() {
           alignItems: 'flex-end',
           marginBottom: 16,
           padding: 16,
+          background: 'white',
           border: '1px solid #e2e8f0',
-          borderRadius: 8,
+          borderRadius: 10,
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
         }}
       >
         <div>
@@ -176,7 +172,9 @@ function FinancnyBenchmark() {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Okres</label>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+            Okres <span style={{ fontWeight: 400, color: '#94a3b8' }}>(zatiaľ len okresy s dátami)</span>
+          </label>
           <select
             value={okresParam}
             onChange={(e) => setOkresParam(e.target.value)}
@@ -195,13 +193,44 @@ function FinancnyBenchmark() {
       </section>
 
       {!naceParam || !okresParam ? (
-        <p style={{ color: '#94a3b8' }}>Vyberte odvetvie a okres pre zobrazenie benchmarku.</p>
+        <div
+          style={{
+            background: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: 10,
+            padding: 32,
+            textAlign: 'center',
+            color: '#94a3b8',
+            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          Vyberte odvetvie a okres pre zobrazenie benchmarku.
+        </div>
       ) : rows && rows.length === 0 ? (
-        <p style={{ color: '#94a3b8' }}>
+        <div
+          style={{
+            background: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: 10,
+            padding: 32,
+            textAlign: 'center',
+            color: '#94a3b8',
+            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          }}
+        >
           Pre túto kombináciu odvetvia a okresu nemáme žiadne dáta z účtovných závierok.
-        </p>
+        </div>
       ) : rows ? (
-        <div style={{ overflowX: 'auto' }}>
+        <div
+          style={{
+            overflowX: 'auto',
+            background: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: 10,
+            padding: '8px 16px',
+            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          }}
+        >
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
