@@ -1,5 +1,5 @@
 // scripts/ingest/ruz/sync-statements.ts
-import type { PrismaClient } from '@prisma/client'
+import { Prisma, type PrismaClient } from '@prisma/client'
 import type { RuzClient } from './client'
 import { decodeFinancialFacts } from './decode-tabulky'
 import { delay } from '../http'
@@ -85,8 +85,12 @@ export async function syncStatements(prisma: PrismaClient, client: RuzClient, si
             // stale-value fixes in this file: a value that can no longer be
             // confirmed must actively clear, not just skip being set).
             idSablony: confirmedIdSablony ?? null,
-            rawTabulky: structuredVykaz?.obsah?.tabulky ?? undefined,
-            pristupnostDat: structuredVykaz?.pristupnostDat,
+            // Must clear together with idSablony above, not just skip being
+            // set - otherwise a statement that stops resolving a structured
+            // vykaz ends up with idSablony: null but a stale, now-orphaned
+            // pristupnostDat/rawTabulky from a previous sync still in place.
+            rawTabulky: structuredVykaz?.obsah?.tabulky ?? Prisma.JsonNull,
+            pristupnostDat: structuredVykaz?.pristupnostDat ?? null,
           },
         })
 

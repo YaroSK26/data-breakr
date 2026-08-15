@@ -1,5 +1,6 @@
 // scripts/ingest/ruz/sync-statements.test.ts
 import { describe, it, expect, vi } from 'vitest'
+import { Prisma } from '@prisma/client'
 import { syncStatements } from './sync-statements'
 import type { RuzClient } from './client'
 
@@ -195,6 +196,48 @@ describe('syncStatements', () => {
         create: expect.objectContaining({ idSablony: undefined }),
       })
     )
+  })
+
+  it('nulls pristupnostDat and rawTabulky together with idSablony on update when no structured vykaz resolves this time', async () => {
+    // idSablony already correctly clears to null via `confirmedIdSablony ??
+    // null` when no structuredVykaz resolves. pristupnostDat/rawTabulky must
+    // clear alongside it in the same update - otherwise the row ends up
+    // internally inconsistent, e.g. pristupnostDat: 'Verejné' with
+    // idSablony: null.
+    const client: Partial<RuzClient> = {
+      listChangedStatementIds: vi.fn().mockResolvedValueOnce({ ids: [42], hasMore: false }),
+      getStatement: vi.fn().mockResolvedValue({
+        id: 42,
+        idUJ: 7,
+        idUctovnychVykazov: [900],
+      }),
+      // No vykaz resolves a structured `obsah.tabulky` this time (e.g. the
+      // source stopped returning the structured table), so structuredVykaz
+      // stays undefined for this statement.
+      getVykaz: vi.fn().mockResolvedValue({
+        id: 900,
+        idSablony: 687,
+        pristupnostDat: 'Verejné',
+      }),
+      getSablona: vi.fn(),
+    }
+    const prisma = fakePrisma()
+
+    const result = await syncStatements(prisma as never, client as RuzClient, new Date('2026-08-01'))
+
+    expect(result.processed).toBe(1)
+    expect(prisma.financialStatement.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          idSablony: null,
+          pristupnostDat: null,
+          // A nullable Prisma Json column needs the Prisma.JsonNull sentinel
+          // (not a plain `null`) to write an actual database NULL.
+          rawTabulky: Prisma.JsonNull,
+        }),
+      })
+    )
+    expect(prisma.financialFacts.upsert).not.toHaveBeenCalled()
   })
 
   it('logs and skips a statement whose detail fetch fails, without aborting the rest of the batch', async () => {

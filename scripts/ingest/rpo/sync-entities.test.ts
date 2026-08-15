@@ -158,6 +158,77 @@ describe('syncBusinessEntities', () => {
     )
   })
 
+  it('explicitly nulls geography fields on update when the current address municipality is not in the local lookup (does not silently keep the stale district)', async () => {
+    // Same "unresolvable municipality" scenario as the create-side test
+    // above, but asserting the UPDATE clause specifically: leaving these
+    // `undefined` on update makes Prisma skip the columns entirely, so a
+    // firm that moved to an address whose municipality isn't in the local
+    // lookup would silently keep its old, now-stale district forever.
+    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }])
+    const client: Partial<RpoClient> = {
+      searchByMunicipality: vi.fn().mockResolvedValue([
+        { id: 1, identifiers: [{ value: 'ICO1' }], fullNames: [{ value: 'Firm 1' }], addresses: [] },
+      ]),
+      getEntity: vi.fn().mockResolvedValue({
+        id: 1,
+        identifiers: [{ value: 'ICO1' }],
+        fullNames: [{ value: 'Firm 1' }],
+        addresses: [{ municipality: { code: 'SK9999999999' }, validFrom: '2020-01-01' }],
+      }),
+    }
+
+    await syncBusinessEntities(prisma as never, client as RpoClient)
+
+    expect(prisma.businessEntity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          municipalityKod: null,
+          okresKod: null,
+          krajKod: null,
+        }),
+      })
+    )
+  })
+
+  it('does not attribute an entity to the search-loop municipality when its current address exists but its municipality code is missing', async () => {
+    // RpoAddress.municipality.code is optional on the source. A current
+    // address with a `value` but no `code` is genuinely different from "no
+    // address on record at all" - treating it the same and falling back to
+    // the search-loop municipality would reproduce the exact mis-attribution
+    // the current-address fix was meant to eliminate.
+    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }])
+    const client: Partial<RpoClient> = {
+      searchByMunicipality: vi.fn().mockResolvedValue([
+        { id: 1, identifiers: [{ value: 'ICO1' }], fullNames: [{ value: 'Firm 1' }], addresses: [] },
+      ]),
+      getEntity: vi.fn().mockResolvedValue({
+        id: 1,
+        identifiers: [{ value: 'ICO1' }],
+        fullNames: [{ value: 'Firm 1' }],
+        // Current address exists (has a `value`) but its municipality code
+        // could not be resolved by the source.
+        addresses: [{ municipality: { value: 'Neznáma obec' }, validFrom: '2020-01-01' }],
+      }),
+    }
+
+    await syncBusinessEntities(prisma as never, client as RpoClient)
+
+    expect(prisma.businessEntity.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          municipalityKod: undefined,
+          okresKod: undefined,
+          krajKod: undefined,
+        }),
+        update: expect.objectContaining({
+          municipalityKod: null,
+          okresKod: null,
+          krajKod: null,
+        }),
+      })
+    )
+  })
+
   it('clears a cleared termination date on update instead of leaving the old value stale', async () => {
     const client: Partial<RpoClient> = {
       searchByMunicipality: vi.fn().mockResolvedValue([
