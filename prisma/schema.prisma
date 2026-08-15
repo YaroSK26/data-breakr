@@ -23,6 +23,7 @@ model Region {
   kod       String      @id
   nazovSk   String      @map("nazov_sk")
   nazovEn   String      @map("nazov_en")
+  geometry  Json?
   districts District[]
 
   @@map("regions")
@@ -46,6 +47,8 @@ model Municipality {
   district        District @relation(fields: [districtKod], references: [kod])
   population      Int?
   populationYear  Int?     @map("population_year")
+  geometry        Json?
+  areaKm2         Float?   @map("area_km2")
 
   @@map("municipalities")
 }
