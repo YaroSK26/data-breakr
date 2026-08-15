@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { DataSourceBanner } from '@/components/DataSourceBanner'
 import type { Metric } from '@/components/DensityMap'
@@ -32,8 +33,16 @@ function MapaHustotyFiriem() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const naceParam = searchParams.get('nace') ?? ''
-  const metricParam = (searchParams.get('metrika') as Metric) ?? 'perCapita'
+  // Local state is the single source of truth for both filters. Reading-
+  // and-rewriting the URL on each change races when the category and
+  // metric change in quick succession, since router.push()'s navigation
+  // is asynchronous - neither update sees the other's pending change yet.
+  // The URL is a one-way sync derived FROM this state, not the other way
+  // around.
+  const [naceParam, setNaceParam] = useState(() => searchParams.get('nace') ?? '')
+  const [metricParam, setMetricParam] = useState<Metric>(
+    () => (searchParams.get('metrika') as Metric) ?? 'perCapita'
+  )
 
   const [categories, setCategories] = useState<Category[]>([])
   const [sources, setSources] = useState<DataSource[]>([])
@@ -53,6 +62,13 @@ function MapaHustotyFiriem() {
   }, [])
 
   useEffect(() => {
+    const params = new URLSearchParams()
+    if (naceParam) params.set('nace', naceParam)
+    if (metricParam !== 'perCapita') params.set('metrika', metricParam)
+    router.replace(`/?${params.toString()}`, { scroll: false })
+  }, [naceParam, metricParam, router])
+
+  useEffect(() => {
     setLoading(true)
     const url = naceParam ? `/api/density?nace=${encodeURIComponent(naceParam)}` : '/api/density'
     fetch(url)
@@ -60,16 +76,6 @@ function MapaHustotyFiriem() {
       .then((d) => setGeoData(d))
       .finally(() => setLoading(false))
   }, [naceParam])
-
-  function updateParam(key: string, value: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set(key, value)
-    } else {
-      params.delete(key)
-    }
-    router.push(`/?${params.toString()}`, { scroll: false })
-  }
 
   return (
     <main
@@ -82,7 +88,12 @@ function MapaHustotyFiriem() {
       }}
     >
       <header style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>SK Biznis Mapa</h1>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>SK Biznis Mapa</h1>
+          <Link href="/benchmark" style={{ fontSize: 13, color: '#2563eb' }}>
+            finančný benchmark odvetví →
+          </Link>
+        </div>
         <p style={{ color: '#64748b', margin: '4px 0 0' }}>
           Mapa hustoty firiem a živnostníkov na Slovensku podľa okresu a kategórie.
         </p>
@@ -106,7 +117,7 @@ function MapaHustotyFiriem() {
           </label>
           <select
             value={naceParam}
-            onChange={(e) => updateParam('nace', e.target.value)}
+            onChange={(e) => setNaceParam(e.target.value)}
             style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', minWidth: 260 }}
           >
             <option value="">Všetky kategórie</option>
@@ -122,7 +133,7 @@ function MapaHustotyFiriem() {
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Metrika</label>
           <div style={{ display: 'flex', gap: 4 }}>
             <button
-              onClick={() => updateParam('metrika', 'perCapita')}
+              onClick={() => setMetricParam('perCapita')}
               style={{
                 padding: '8px 12px',
                 borderRadius: 6,
@@ -135,7 +146,7 @@ function MapaHustotyFiriem() {
               Na 1000 obyvateľov
             </button>
             <button
-              onClick={() => updateParam('metrika', 'absolute')}
+              onClick={() => setMetricParam('absolute')}
               style={{
                 padding: '8px 12px',
                 borderRadius: 6,
