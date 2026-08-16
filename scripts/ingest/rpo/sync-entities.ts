@@ -34,6 +34,7 @@ export async function syncBusinessEntities(prisma: PrismaClient, client: RpoClie
   const allMunicipalities = await prisma.municipality.findMany({
     include: { district: true },
   })
+  console.log(`Loaded ${allMunicipalities.length} municipalities.`)
 
   // Lookup by municipality code so we can resolve district/region for ANY
   // municipality an entity's current address points to - not just the one
@@ -57,6 +58,9 @@ export async function syncBusinessEntities(prisma: PrismaClient, client: RpoClie
   // done, so a restart resumes roughly where it left off.
   const municipalitiesToSearch = allMunicipalities.filter(
     (m) => (m as unknown as { rpoSearchedAt: Date | null }).rpoSearchedAt === null
+  )
+  console.log(
+    `${municipalitiesToSearch.length} municipalities left to search this sweep (${allMunicipalities.length - municipalitiesToSearch.length} already done).`
   )
 
   let processed = 0
@@ -172,6 +176,7 @@ export async function syncBusinessEntities(prisma: PrismaClient, client: RpoClie
           // actually clear it locally rather than leaving the entity
           // stuck as inactive (or vice versa).
           datumZaniku: detail.termination ? new Date(detail.termination) : null,
+          lastSyncedAt: new Date(),
         },
       })
       processed++
@@ -181,18 +186,37 @@ export async function syncBusinessEntities(prisma: PrismaClient, client: RpoClie
     }
   }
 
-  for (const muni of municipalitiesToSearch) {
+  for (let muniIndex = 0; muniIndex < municipalitiesToSearch.length; muniIndex++) {
+    const muni = municipalitiesToSearch[muniIndex]
+    const searchStart = Date.now()
     const results = await client.searchByMunicipality(muni.kod)
+    if (results.length > 50) {
+      console.log(`  [${muni.kod}] large result set: ${results.length} entities (search took ${Date.now() - searchStart}ms)`)
+    }
 
     for (let i = 0; i < results.length; i += ENTITY_CONCURRENCY) {
+      const batchStart = Date.now()
       const batch = results.slice(i, i + ENTITY_CONCURRENCY)
       await Promise.all(batch.map((result) => processEntity(result, muni)))
+      if (results.length > 50 && i % 100 === 0) {
+        console.log(`  [${muni.kod}] batch ${i}/${results.length} done in ${Date.now() - batchStart}ms (processed=${processed} skipped=${skipped})`)
+      }
     }
 
     await prisma.municipality.update({
       where: { kod: muni.kod },
       data: { rpoSearchedAt: new Date() } as never,
     })
+
+    // Visible progress heartbeat - without this, a genuinely slow (but
+    // working) run and a hung one look identical from the log alone.
+    // Confirmed live: the log stayed at just the startup line for 20+
+    // minutes with no way to tell which was happening.
+    if ((muniIndex + 1) % 25 === 0 || muniIndex === municipalitiesToSearch.length - 1) {
+      console.log(
+        `[${new Date().toISOString()}] ${muniIndex + 1}/${municipalitiesToSearch.length} municipalities (${muni.kod}) - processed=${processed} skipped=${skipped}`
+      )
+    }
 
     await delay(250)
   }
