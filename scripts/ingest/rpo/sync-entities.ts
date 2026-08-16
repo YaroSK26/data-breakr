@@ -62,116 +62,131 @@ export async function syncBusinessEntities(prisma: PrismaClient, client: RpoClie
   let processed = 0
   let skipped = 0
 
+  // How many entity-detail fetches run concurrently within one
+  // municipality's result set. The RPO API has no documented rate limit,
+  // and fully sequential processing (1 request at a time) makes the
+  // observed real-world latency (4-10s per call today) the dominant
+  // bottleneck: confirmed live, a run can sit for 10+ minutes without a
+  // single new record while working through one municipality's results
+  // one at a time. Kept modest (not unbounded) to stay a well-behaved
+  // client against an API with no published limit.
+  const ENTITY_CONCURRENCY = 5
+
+  async function processEntity(result: { id: number }, muni: (typeof allMunicipalities)[number]) {
+    try {
+      const detail = await client.getEntity(result.id)
+      const ico = detail.identifiers[0]?.value
+      const nazov = detail.fullNames[detail.fullNames.length - 1]?.value
+      const naceKod4 = detail.statisticalCodes?.mainActivity?.code
+      const pravnaFormaKod = detail.legalForms?.[detail.legalForms.length - 1]?.value.code
+
+      const currentAddress = findCurrentAddress(detail.addresses ?? [])
+      const hasCurrentAddress = currentAddress !== undefined
+      const currentMuniCode = currentAddress?.municipality?.code
+
+      let municipalityKod: string | undefined
+      let okresKod: string | undefined
+      let krajKod: string | undefined
+      // Whether the geography fields must be explicitly nulled on update
+      // rather than left `undefined`. Prisma treats `undefined` as "don't
+      // touch this column" on update, so if we ever had geography stored
+      // from a prior sync and now can't resolve it, leaving these fields
+      // `undefined` would silently keep the stale value forever. `create`
+      // doesn't have this problem - `undefined` there just writes NULL.
+      let clearGeoOnUpdate = false
+
+      if (currentMuniCode) {
+        const geo = municipalityLookup.get(currentMuniCode)
+        if (geo) {
+          municipalityKod = currentMuniCode
+          okresKod = geo.districtKod
+          krajKod = geo.regionKod
+        } else {
+          // The entity's current address is in a municipality we have no
+          // district/region data for (e.g. outside our municipalities
+          // table). Leave geography fields unset on create rather than
+          // guessing, and actively clear them on update - falling back to
+          // the search-loop municipality here would silently reproduce the
+          // exact mis-attribution this is fixing, and leaving `undefined`
+          // on update would silently keep a stale district from before the
+          // entity moved.
+          clearGeoOnUpdate = true
+        }
+      } else if (hasCurrentAddress) {
+        // A current address exists (RpoAddress.municipality.code is
+        // optional on the source), but we can't resolve it to a
+        // municipality. This is NOT the same as "no address on record" -
+        // we know the entity has a current address, we just can't derive
+        // geography from it. Treat it the same as the unresolvable-lookup
+        // case above rather than falling back to the search-loop
+        // municipality, which would reintroduce the exact mis-attribution
+        // this file's current-address fix was meant to eliminate.
+        clearGeoOnUpdate = true
+      } else {
+        // No address on record at all, so there is no current-address
+        // signal to derive geography from. This differs from the two
+        // cases above (a current address exists but can't be resolved):
+        // here there was never a location signal from the entity itself,
+        // so the search-loop municipality is the only signal available at
+        // all - use it as a best-effort fallback on both create and
+        // update. Because there was no resolvable current-address signal
+        // to begin with, this isn't "stale data that must clear" the way
+        // the other two cases are.
+        municipalityKod = muni.kod
+        okresKod = muni.districtKod
+        krajKod = (muni as unknown as { district: { regionKod: string } }).district.regionKod
+      }
+
+      await prisma.businessEntity.upsert({
+        where: { id: BigInt(detail.id) },
+        create: {
+          id: BigInt(detail.id),
+          ico,
+          nazov,
+          municipalityKod,
+          okresKod,
+          krajKod,
+          naceKod4,
+          pravnaFormaKod,
+          datumVzniku: detail.establishment ? new Date(detail.establishment) : undefined,
+          datumZaniku: detail.termination ? new Date(detail.termination) : undefined,
+          zdrojDat: 'RPO',
+        },
+        update: {
+          ico,
+          nazov,
+          // An entity may have moved since the last sync - re-derive
+          // geography from its current address every time rather than
+          // leaving whatever was stored at creation in place. When the
+          // current address can't be resolved to a municipality (but we
+          // know it exists, or the lookup is missing it), explicitly null
+          // these out instead of leaving them `undefined` - see
+          // `clearGeoOnUpdate` above.
+          municipalityKod: clearGeoOnUpdate ? null : municipalityKod,
+          okresKod: clearGeoOnUpdate ? null : okresKod,
+          krajKod: clearGeoOnUpdate ? null : krajKod,
+          naceKod4,
+          pravnaFormaKod,
+          // recompute-density.ts uses datumZaniku as the active/inactive
+          // filter, so a cleared termination date on the source must
+          // actually clear it locally rather than leaving the entity
+          // stuck as inactive (or vice versa).
+          datumZaniku: detail.termination ? new Date(detail.termination) : null,
+        },
+      })
+      processed++
+    } catch (err) {
+      console.error(`Failed to sync business entity ${result.id}:`, err)
+      skipped++
+    }
+  }
+
   for (const muni of municipalitiesToSearch) {
     const results = await client.searchByMunicipality(muni.kod)
 
-    for (const result of results) {
-      try {
-        const detail = await client.getEntity(result.id)
-        const ico = detail.identifiers[0]?.value
-        const nazov = detail.fullNames[detail.fullNames.length - 1]?.value
-        const naceKod4 = detail.statisticalCodes?.mainActivity?.code
-        const pravnaFormaKod = detail.legalForms?.[detail.legalForms.length - 1]?.value.code
-
-        const currentAddress = findCurrentAddress(detail.addresses ?? [])
-        const hasCurrentAddress = currentAddress !== undefined
-        const currentMuniCode = currentAddress?.municipality?.code
-
-        let municipalityKod: string | undefined
-        let okresKod: string | undefined
-        let krajKod: string | undefined
-        // Whether the geography fields must be explicitly nulled on update
-        // rather than left `undefined`. Prisma treats `undefined` as "don't
-        // touch this column" on update, so if we ever had geography stored
-        // from a prior sync and now can't resolve it, leaving these fields
-        // `undefined` would silently keep the stale value forever. `create`
-        // doesn't have this problem - `undefined` there just writes NULL.
-        let clearGeoOnUpdate = false
-
-        if (currentMuniCode) {
-          const geo = municipalityLookup.get(currentMuniCode)
-          if (geo) {
-            municipalityKod = currentMuniCode
-            okresKod = geo.districtKod
-            krajKod = geo.regionKod
-          } else {
-            // The entity's current address is in a municipality we have no
-            // district/region data for (e.g. outside our municipalities
-            // table). Leave geography fields unset on create rather than
-            // guessing, and actively clear them on update - falling back to
-            // the search-loop municipality here would silently reproduce the
-            // exact mis-attribution this is fixing, and leaving `undefined`
-            // on update would silently keep a stale district from before the
-            // entity moved.
-            clearGeoOnUpdate = true
-          }
-        } else if (hasCurrentAddress) {
-          // A current address exists (RpoAddress.municipality.code is
-          // optional on the source), but we can't resolve it to a
-          // municipality. This is NOT the same as "no address on record" -
-          // we know the entity has a current address, we just can't derive
-          // geography from it. Treat it the same as the unresolvable-lookup
-          // case above rather than falling back to the search-loop
-          // municipality, which would reintroduce the exact mis-attribution
-          // this file's current-address fix was meant to eliminate.
-          clearGeoOnUpdate = true
-        } else {
-          // No address on record at all, so there is no current-address
-          // signal to derive geography from. This differs from the two
-          // cases above (a current address exists but can't be resolved):
-          // here there was never a location signal from the entity itself,
-          // so the search-loop municipality is the only signal available at
-          // all - use it as a best-effort fallback on both create and
-          // update. Because there was no resolvable current-address signal
-          // to begin with, this isn't "stale data that must clear" the way
-          // the other two cases are.
-          municipalityKod = muni.kod
-          okresKod = muni.districtKod
-          krajKod = (muni as unknown as { district: { regionKod: string } }).district.regionKod
-        }
-
-        await prisma.businessEntity.upsert({
-          where: { id: BigInt(detail.id) },
-          create: {
-            id: BigInt(detail.id),
-            ico,
-            nazov,
-            municipalityKod,
-            okresKod,
-            krajKod,
-            naceKod4,
-            pravnaFormaKod,
-            datumVzniku: detail.establishment ? new Date(detail.establishment) : undefined,
-            datumZaniku: detail.termination ? new Date(detail.termination) : undefined,
-            zdrojDat: 'RPO',
-          },
-          update: {
-            ico,
-            nazov,
-            // An entity may have moved since the last sync - re-derive
-            // geography from its current address every time rather than
-            // leaving whatever was stored at creation in place. When the
-            // current address can't be resolved to a municipality (but we
-            // know it exists, or the lookup is missing it), explicitly null
-            // these out instead of leaving them `undefined` - see
-            // `clearGeoOnUpdate` above.
-            municipalityKod: clearGeoOnUpdate ? null : municipalityKod,
-            okresKod: clearGeoOnUpdate ? null : okresKod,
-            krajKod: clearGeoOnUpdate ? null : krajKod,
-            naceKod4,
-            pravnaFormaKod,
-            // recompute-density.ts uses datumZaniku as the active/inactive
-            // filter, so a cleared termination date on the source must
-            // actually clear it locally rather than leaving the entity
-            // stuck as inactive (or vice versa).
-            datumZaniku: detail.termination ? new Date(detail.termination) : null,
-          },
-        })
-        processed++
-      } catch (err) {
-        console.error(`Failed to sync business entity ${result.id}:`, err)
-        skipped++
-      }
+    for (let i = 0; i < results.length; i += ENTITY_CONCURRENCY) {
+      const batch = results.slice(i, i + ENTITY_CONCURRENCY)
+      await Promise.all(batch.map((result) => processEntity(result, muni)))
     }
 
     await prisma.municipality.update({
