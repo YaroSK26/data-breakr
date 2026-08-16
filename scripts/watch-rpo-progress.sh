@@ -1,10 +1,20 @@
 #!/bin/bash
 # Polls business_entities count every 3 minutes, reports progress or stall.
 cd "D:\baroslav-jarabas\vscode\data-breakr" || exit 1
+
+# Self-contained: writes its own check script each run rather than relying
+# on an external scratch file, which has been accidentally deleted mid-run
+# during cleanup more than once.
+CHECK_FILE=".watch-rpo-count-check.ts"
+cat > "$CHECK_FILE" <<'EOF'
+import { prisma } from './lib/prisma'
+prisma.businessEntity.count().then((c) => { console.log(c); process.exit(0) }).catch((e) => { console.error(e); process.exit(1) })
+EOF
+
 prev=""
 stall_count=0
 while true; do
-  out=$(npx tsx scratch-count-check.ts 2>/dev/null | tail -1)
+  out=$(npx tsx "$CHECK_FILE" 2>/dev/null | tail -1)
 
   now=$(date -u +%H:%M:%S)
 

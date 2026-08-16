@@ -7,8 +7,11 @@ function fakePrisma(municipalities?: unknown[]) {
   return {
     municipality: {
       findMany: vi.fn().mockResolvedValue(
-        municipalities ?? [{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }]
+        municipalities ?? [
+          { kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' }, rpoSearchedAt: null },
+        ]
       ),
+      update: vi.fn(),
     },
     businessEntity: { upsert: vi.fn() },
   }
@@ -62,8 +65,8 @@ describe('syncBusinessEntities', () => {
     // municipality A but has since moved to municipality B will still show
     // up when searching A. The sync must not attribute it to A.
     const prisma = fakePrisma([
-      { kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }, // A - stale, search hit
-      { kod: 'SK0105529460', districtKod: 'SK0105', district: { regionKod: 'SK010' } }, // B - current
+      { kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' }, rpoSearchedAt: null }, // A - stale, search hit
+      { kod: 'SK0105529460', districtKod: 'SK0105', district: { regionKod: 'SK010' }, rpoSearchedAt: null }, // B - current
     ])
     const client: Partial<RpoClient> = {
       searchByMunicipality: vi.fn((kod: string) =>
@@ -105,7 +108,7 @@ describe('syncBusinessEntities', () => {
   })
 
   it('leaves geography fields unset when the current address municipality is not in the municipalities table', async () => {
-    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }])
+    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' }, rpoSearchedAt: null }])
     const client: Partial<RpoClient> = {
       searchByMunicipality: vi.fn().mockResolvedValue([
         { id: 1, identifiers: [{ value: 'ICO1' }], fullNames: [{ value: 'Firm 1' }], addresses: [] },
@@ -164,7 +167,7 @@ describe('syncBusinessEntities', () => {
     // `undefined` on update makes Prisma skip the columns entirely, so a
     // firm that moved to an address whose municipality isn't in the local
     // lookup would silently keep its old, now-stale district forever.
-    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }])
+    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' }, rpoSearchedAt: null }])
     const client: Partial<RpoClient> = {
       searchByMunicipality: vi.fn().mockResolvedValue([
         { id: 1, identifiers: [{ value: 'ICO1' }], fullNames: [{ value: 'Firm 1' }], addresses: [] },
@@ -196,7 +199,7 @@ describe('syncBusinessEntities', () => {
     // address on record at all" - treating it the same and falling back to
     // the search-loop municipality would reproduce the exact mis-attribution
     // the current-address fix was meant to eliminate.
-    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' } }])
+    const prisma = fakePrisma([{ kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' }, rpoSearchedAt: null }])
     const client: Partial<RpoClient> = {
       searchByMunicipality: vi.fn().mockResolvedValue([
         { id: 1, identifiers: [{ value: 'ICO1' }], fullNames: [{ value: 'Firm 1' }], addresses: [] },
@@ -274,5 +277,36 @@ describe('syncBusinessEntities', () => {
     expect(consoleErrorSpy).toHaveBeenCalled()
 
     consoleErrorSpy.mockRestore()
+  })
+
+  it('skips municipalities already searched in the current sweep, and marks a newly-searched one done', async () => {
+    // Confirmed live: this run gets restarted often (editor auto-updates,
+    // hung requests). Without resume, every restart re-walks from the
+    // first municipality (already fully covered), burning significant
+    // time before reaching any new ground.
+    const prisma = fakePrisma([
+      { kod: 'SK0101528595', districtKod: 'SK0101', district: { regionKod: 'SK010' }, rpoSearchedAt: new Date('2026-08-16T10:00:00Z') }, // already done this sweep
+      { kod: 'SK0315510335', districtKod: 'SK0315', district: { regionKod: 'SK031' }, rpoSearchedAt: null }, // not yet done
+    ])
+    const client: Partial<RpoClient> = {
+      searchByMunicipality: vi.fn().mockResolvedValue([]),
+      getEntity: vi.fn(),
+    }
+
+    await syncBusinessEntities(prisma as never, client as RpoClient)
+
+    // Only the unsearched municipality's code was ever passed to the search call.
+    expect(client.searchByMunicipality).toHaveBeenCalledTimes(1)
+    expect(client.searchByMunicipality).toHaveBeenCalledWith('SK0315510335')
+    expect(client.searchByMunicipality).not.toHaveBeenCalledWith('SK0101528595')
+
+    // The newly-searched municipality gets marked done.
+    expect(prisma.municipality.update).toHaveBeenCalledWith({
+      where: { kod: 'SK0315510335' },
+      data: { rpoSearchedAt: expect.any(Date) },
+    })
+    expect(prisma.municipality.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: { kod: 'SK0101528595' } })
+    )
   })
 })

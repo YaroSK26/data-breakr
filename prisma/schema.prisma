@@ -50,6 +50,7 @@ model Municipality {
   populationYear  Int?     @map("population_year")
   geometry        Json?
   areaKm2         Float?   @map("area_km2")
+  rpoSearchedAt   DateTime? @map("rpo_searched_at")
 
   @@map("municipalities")
 }

@@ -31,24 +31,38 @@ function findCurrentAddress(addresses: RpoAddress[]): RpoAddress | undefined {
 }
 
 export async function syncBusinessEntities(prisma: PrismaClient, client: RpoClient) {
-  const municipalities = await prisma.municipality.findMany({
+  const allMunicipalities = await prisma.municipality.findMany({
     include: { district: true },
   })
 
   // Lookup by municipality code so we can resolve district/region for ANY
   // municipality an entity's current address points to - not just the one
-  // municipality we happened to be searching when we found it.
+  // municipality we happened to be searching when we found it. Built from
+  // ALL municipalities regardless of sweep progress, since an entity's
+  // current address can point anywhere, not just an unsearched municipality.
   const municipalityLookup = new Map<string, MunicipalityGeo>(
-    municipalities.map((m) => [
+    allMunicipalities.map((m) => [
       m.kod,
       { districtKod: m.districtKod, regionKod: (m as unknown as { district: { regionKod: string } }).district.regionKod },
     ])
   )
 
+  // Only search municipalities not yet covered in the current sweep
+  // (rpoSearchedAt null). Without this, every restart - and this run has
+  // been restarted repeatedly today (an editor auto-update killed it, a
+  // hung request stalled it) - re-walks from the very first municipality
+  // (Bratislava-area, already fully searched), burning significant time
+  // before reaching any new ground. Each municipality is marked searched
+  // once its full result set (including per-entity detail fetches) is
+  // done, so a restart resumes roughly where it left off.
+  const municipalitiesToSearch = allMunicipalities.filter(
+    (m) => (m as unknown as { rpoSearchedAt: Date | null }).rpoSearchedAt === null
+  )
+
   let processed = 0
   let skipped = 0
 
-  for (const muni of municipalities) {
+  for (const muni of municipalitiesToSearch) {
     const results = await client.searchByMunicipality(muni.kod)
 
     for (const result of results) {
@@ -159,6 +173,11 @@ export async function syncBusinessEntities(prisma: PrismaClient, client: RpoClie
         skipped++
       }
     }
+
+    await prisma.municipality.update({
+      where: { kod: muni.kod },
+      data: { rpoSearchedAt: new Date() } as never,
+    })
 
     await delay(250)
   }
