@@ -188,25 +188,36 @@ export async function syncBusinessEntities(prisma: PrismaClient, client: RpoClie
 
   for (let muniIndex = 0; muniIndex < municipalitiesToSearch.length; muniIndex++) {
     const muni = municipalitiesToSearch[muniIndex]
-    const searchStart = Date.now()
-    const results = await client.searchByMunicipality(muni.kod)
-    if (results.length > 50) {
-      console.log(`  [${muni.kod}] large result set: ${results.length} entities (search took ${Date.now() - searchStart}ms)`)
-    }
 
-    for (let i = 0; i < results.length; i += ENTITY_CONCURRENCY) {
-      const batchStart = Date.now()
-      const batch = results.slice(i, i + ENTITY_CONCURRENCY)
-      await Promise.all(batch.map((result) => processEntity(result, muni)))
-      if (results.length > 50 && i % 100 === 0) {
-        console.log(`  [${muni.kod}] batch ${i}/${results.length} done in ${Date.now() - batchStart}ms (processed=${processed} skipped=${skipped})`)
+    // A transient failure here (RPO API down, DB pooler unreachable, etc.)
+    // used to crash the whole multi-day process - confirmed live on
+    // 2026-08-18 via an uncaught "Can't reach database server" error from
+    // the rpoSearchedAt update. Catch at the municipality level instead:
+    // log it, leave rpoSearchedAt unset so the next run's resume logic
+    // picks this municipality back up, and keep going.
+    try {
+      const searchStart = Date.now()
+      const results = await client.searchByMunicipality(muni.kod)
+      if (results.length > 50) {
+        console.log(`  [${muni.kod}] large result set: ${results.length} entities (search took ${Date.now() - searchStart}ms)`)
       }
-    }
 
-    await prisma.municipality.update({
-      where: { kod: muni.kod },
-      data: { rpoSearchedAt: new Date() } as never,
-    })
+      for (let i = 0; i < results.length; i += ENTITY_CONCURRENCY) {
+        const batchStart = Date.now()
+        const batch = results.slice(i, i + ENTITY_CONCURRENCY)
+        await Promise.all(batch.map((result) => processEntity(result, muni)))
+        if (results.length > 50 && i % 100 === 0) {
+          console.log(`  [${muni.kod}] batch ${i}/${results.length} done in ${Date.now() - batchStart}ms (processed=${processed} skipped=${skipped})`)
+        }
+      }
+
+      await prisma.municipality.update({
+        where: { kod: muni.kod },
+        data: { rpoSearchedAt: new Date() } as never,
+      })
+    } catch (err) {
+      console.error(`Failed to sync municipality ${muni.kod} (${muni.nazov}), will retry next run:`, err)
+    }
 
     // Visible progress heartbeat - without this, a genuinely slow (but
     // working) run and a hung one look identical from the log alone.
