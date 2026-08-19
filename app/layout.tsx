@@ -1,29 +1,31 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Urbanist, Sora } from "next/font/google";
 import { AppHeader } from "@/components/AppHeader";
+import { Footer } from "@/components/Footer";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const urbanist = Urbanist({
+  variable: "--font-urbanist",
+  subsets: ["latin", "latin-ext"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin", "latin-ext"],
 });
 
 export const metadata: Metadata = {
-  title: "SK Biznis Mapa",
-  description: "Mapa hustoty firiem a finančný benchmark odvetví na Slovensku",
+  title: "Databáza Firiem",
+  description: "Mapa hustoty firiem a živnostníkov na Slovensku podľa okresu a odvetvia",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body style={{ margin: 0, background: "#f8fafc" }}>
+    <html lang="sk" className={`${urbanist.variable} ${sora.variable}`}>
+      <body style={{ margin: 0, background: "#f8fafc", display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <AppHeader />
-        {children}
+        <div id="main-content" style={{ flex: 1 }}>{children}</div>
+        <Footer />
       </body>
     </html>
   );

@@ -16,7 +16,7 @@ export async function recomputeDensity(prisma: PrismaClient) {
     SELECT
       be."okres_kod" AS "okresKod",
       be."nace_kod4" AS "naceKod4",
-      COUNT(DISTINCT be.id) AS "pocet",
+      COUNT(*) AS "pocet",
       MAX(dp.population) AS "population"
     FROM business_entities be
     LEFT JOIN (

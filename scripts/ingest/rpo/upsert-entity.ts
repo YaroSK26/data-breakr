@@ -61,6 +61,11 @@ export async function upsertBusinessEntity(
   const currentAddress = findCurrentAddress(detail.addresses ?? [])
   const hasCurrentAddress = currentAddress !== undefined
   const currentMuniCode = currentAddress?.municipality?.code
+  const ulica = currentAddress?.street
+    ? [currentAddress.street, currentAddress.buildingNumber].filter(Boolean).join(' ')
+    : undefined
+  const mesto = currentAddress?.municipality?.value
+  const psc = currentAddress?.postalCodes?.[0]
 
   let municipalityKod: string | undefined
   let okresKod: string | undefined
@@ -121,6 +126,9 @@ export async function upsertBusinessEntity(
       id: BigInt(detail.id),
       ico,
       nazov,
+      ulica,
+      mesto,
+      psc,
       municipalityKod,
       okresKod,
       krajKod,
@@ -133,6 +141,12 @@ export async function upsertBusinessEntity(
     update: {
       ico,
       nazov,
+      // Same "re-derive from current address every time" reasoning as
+      // geography below - an entity's street address can change
+      // independently of its municipality.
+      ulica: ulica ?? null,
+      mesto: mesto ?? null,
+      psc: psc ?? null,
       // An entity may have moved since the last sync - re-derive
       // geography from its current address every time rather than
       // leaving whatever was stored at creation in place. When the

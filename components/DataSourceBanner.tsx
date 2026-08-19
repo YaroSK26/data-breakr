@@ -5,9 +5,10 @@ interface DataSourceBannerProps {
     lastSyncedAt: string | null;
     recordsCount: number | null;
   }[];
+  activeCount?: number | null;
 }
 
-export function DataSourceBanner({ sources }: DataSourceBannerProps) {
+export function DataSourceBanner({ sources, activeCount }: DataSourceBannerProps) {
   return (
     <div
       style={{
@@ -41,13 +42,19 @@ export function DataSourceBanner({ sources }: DataSourceBannerProps) {
             </>
           )}
           {s.recordsCount !== null && (
-            <> ({s.recordsCount.toLocaleString("sk-SK")} záznamov)</>
+            <>
+              {" "}
+              ({s.recordsCount.toLocaleString("sk-SK")} záznamov
+              {s.sourceName === "RPO" && activeCount != null && (
+                <>, z toho {activeCount.toLocaleString("sk-SK")} aktívnych</>
+              )}
+              )
+            </>
           )}
         </span>
       ))}
       <span style={{ marginLeft: "auto", fontStyle: "italic" }}>
-        Zahŕňa všetky firmy vrátane živnostníkov (RPO). Iný dátový základ než
-        finančný benchmark.
+        Zahŕňa všetky firmy vrátane živnostníkov (RPO).
       </span>
     </div>
   );

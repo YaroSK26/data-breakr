@@ -1,14 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { buttonOutline } from "./buttonStyles";
 
 interface Firm {
   id: string;
+  ico: string | null;
   nazov: string | null;
   ulica: string | null;
   mesto: string | null;
   psc: string | null;
   naceKod4: string | null;
+}
+
+function externalLookupUrl(firm: Firm): string {
+  if (firm.ico && firm.ico !== "Neuvedené") {
+    return `https://www.finstat.sk/${firm.ico}`;
+  }
+  const query = [firm.nazov, firm.mesto].filter(Boolean).join(" ");
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
 interface CategoryLookup {
@@ -87,7 +97,6 @@ export function FirmListPanel({
         zIndex: 2000,
         display: "flex",
         flexDirection: "column",
-        fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
       <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0" }}>
@@ -101,7 +110,9 @@ export function FirmListPanel({
           <div>
             <h2 style={{ margin: 0, fontSize: 18 }}>{okresNazov}</h2>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
-              {total.toLocaleString("sk-SK")} {total === 1 ? "firma" : "firiem"}
+              {loading && total === 0
+                ? "Načítavam…"
+                : `${total.toLocaleString("sk-SK")} ${total === 1 ? "firma" : "firiem"}`}
             </p>
           </div>
           <button
@@ -174,19 +185,34 @@ export function FirmListPanel({
               style={{
                 padding: "10px 20px",
                 borderBottom: "1px solid #f1f5f9",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 8,
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: 14 }}>
-                {f.nazov ?? "(bez názvu)"}
-              </div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>
-                {[f.ulica, f.mesto, f.psc].filter(Boolean).join(", ") || "-"}
-              </div>
-              {!localNace && (
-                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
-                  {categoryName(f.naceKod4)}
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>
+                  {f.nazov?.replace(/["„”]/g, "") ?? "(bez názvu)"}
                 </div>
-              )}
+                <div style={{ fontSize: 12, color: "#64748b" }}>
+                  {[f.ulica, f.mesto, f.psc].filter(Boolean).join(", ") || "-"}
+                </div>
+                {!localNace && (
+                  <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+                    {categoryName(f.naceKod4)}
+                  </div>
+                )}
+              </div>
+              <a
+                href={externalLookupUrl(f)}
+                target="_blank"
+                rel="noreferrer"
+                title={f.ico && f.ico !== "Neuvedené" ? "Zobraziť na Finstat" : "Hľadať v Google"}
+                style={{ ...buttonOutline("onLight", "sm"), flexShrink: 0, whiteSpace: "nowrap", marginTop: 1 }}
+              >
+                Detail ↗
+              </a>
             </div>
           ))
         )}
@@ -206,11 +232,7 @@ export function FirmListPanel({
           <button
             onClick={() => setOffset((o) => Math.max(0, o - 100))}
             disabled={offset === 0}
-            style={{
-              padding: "4px 10px",
-              cursor: offset === 0 ? "default" : "pointer",
-              opacity: offset === 0 ? 0.4 : 1,
-            }}
+            style={{ ...buttonOutline("onLight", "sm"), opacity: offset === 0 ? 0.4 : 1, cursor: offset === 0 ? "default" : "pointer" }}
           >
             ← predošlé
           </button>
@@ -222,9 +244,9 @@ export function FirmListPanel({
             onClick={() => setOffset((o) => o + 100)}
             disabled={offset + 100 >= total}
             style={{
-              padding: "4px 10px",
-              cursor: offset + 100 >= total ? "default" : "pointer",
+              ...buttonOutline("onLight", "sm"),
               opacity: offset + 100 >= total ? 0.4 : 1,
+              cursor: offset + 100 >= total ? "default" : "pointer",
             }}
           >
             ďalšie →

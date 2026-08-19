@@ -5,8 +5,9 @@ import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { DataSourceBanner } from '@/components/DataSourceBanner'
 import { FirmListPanel } from '@/components/FirmListPanel'
-import type { Metric } from '@/components/DensityMap'
-import type { FeatureCollection } from 'geojson'
+import { Hero } from '@/components/Hero'
+import { SearchableSelect } from '@/components/SearchableSelect'
+import type { Metric, DistrictDensity } from '@/components/DensityMap'
 
 const DensityMap = dynamic(() => import('@/components/DensityMap').then((m) => m.DensityMap), {
   ssr: false,
@@ -17,9 +18,19 @@ const DensityMap = dynamic(() => import('@/components/DensityMap').then((m) => m
   ),
 })
 
+const StatsCharts = dynamic(() => import('@/components/StatsCharts').then((m) => m.StatsCharts), {
+  ssr: false,
+  loading: () => <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Načítavam grafy…</div>,
+})
+
 interface Category {
   kod4: string
   nazov: string
+}
+
+interface Kraj {
+  kod: string
+  nazovSk: string
 }
 
 interface DataSource {
@@ -27,6 +38,15 @@ interface DataSource {
   sourceUrl: string
   lastSyncedAt: string | null
   recordsCount: number | null
+}
+
+export interface Stats {
+  totalActive: number
+  totalTerminated: number
+  byDistrict: { nazov: string; pocet: number }[]
+  byCategory: { kod4: string; nazov: string; pocet: number }[]
+  byYear: { rok: number; pocet: number }[]
+  computedAt?: string
 }
 
 function MapaHustotyFiriem() {
@@ -40,15 +60,18 @@ function MapaHustotyFiriem() {
   // The URL is a one-way sync derived FROM this state, not the other way
   // around.
   const [naceParam, setNaceParam] = useState(() => searchParams.get('nace') ?? '')
+  const [krajParam, setKrajParam] = useState(() => searchParams.get('kraj') ?? '')
   const [metricParam, setMetricParam] = useState<Metric>(
-    () => (searchParams.get('metrika') as Metric) ?? 'perCapita'
+    () => (searchParams.get('metrika') as Metric) ?? 'absolute'
   )
 
   const [categories, setCategories] = useState<Category[]>([])
+  const [kraje, setKraje] = useState<Kraj[]>([])
   const [sources, setSources] = useState<DataSource[]>([])
-  const [geoData, setGeoData] = useState<FeatureCollection | null>(null)
+  const [densityByDistrict, setDensityByDistrict] = useState<Record<string, DistrictDensity> | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDistrict, setSelectedDistrict] = useState<{ kod: string; nazov: string } | null>(null)
+  const [stats, setStats] = useState<Stats | null>(null)
 
   useEffect(() => {
     fetch('/api/categories')
@@ -56,142 +79,220 @@ function MapaHustotyFiriem() {
       .then((d) => setCategories(d.categories))
       .catch(() => setCategories([]))
 
+    fetch('/api/kraje')
+      .then((r) => r.json())
+      .then((d) => setKraje(d.regions))
+      .catch(() => setKraje([]))
+
     fetch('/api/data-sources')
       .then((r) => r.json())
       .then((d) => setSources(d.sources))
       .catch(() => setSources([]))
+
+    fetch('/api/stats')
+      .then((r) => r.json())
+      .then((d) => setStats(d))
+      .catch(() => setStats(null))
   }, [])
 
   useEffect(() => {
     const params = new URLSearchParams()
     if (naceParam) params.set('nace', naceParam)
-    if (metricParam !== 'perCapita') params.set('metrika', metricParam)
+    if (krajParam) params.set('kraj', krajParam)
+    if (metricParam !== 'absolute') params.set('metrika', metricParam)
     router.replace(`/?${params.toString()}`, { scroll: false })
-  }, [naceParam, metricParam, router])
+  }, [naceParam, krajParam, metricParam, router])
 
   useEffect(() => {
     setLoading(true)
-    const url = naceParam ? `/api/density?nace=${encodeURIComponent(naceParam)}` : '/api/density'
-    fetch(url)
+    const params = new URLSearchParams()
+    if (naceParam) params.set('nace', naceParam)
+    if (krajParam) params.set('kraj', krajParam)
+    fetch(`/api/density?${params.toString()}`)
       .then((r) => r.json())
-      .then((d) => setGeoData(d))
+      .then((d) => setDensityByDistrict(d.byDistrict))
       .finally(() => setLoading(false))
-  }, [naceParam])
+  }, [naceParam, krajParam])
 
   return (
-    <main
+    <>
+      <Hero activeCount={stats?.totalActive ?? null} />
+
+      <main
+        style={{
+          maxWidth: 1100,
+          margin: '0 auto',
+          padding: '24px 20px 48px',
+          color: '#1e293b',
+        }}
+      >
+        <header id="mapa" style={{ marginBottom: 20, scrollMarginTop: 20 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Mapa hustoty firiem</h1>
+          <p style={{ color: '#64748b', margin: '4px 0 0', fontSize: 14 }}>
+            Hustota firiem a živnostníkov na Slovensku podľa okresu a kategórie.
+          </p>
+        </header>
+
+        <section
+          style={{
+            display: 'flex',
+            gap: 16,
+            flexWrap: 'wrap',
+            alignItems: 'flex-end',
+            marginBottom: 16,
+            padding: 16,
+            background: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: 10,
+            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          <div style={{ flex: '1 1 260px' }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+              Kategória (NACE) - píš pre hľadanie
+            </label>
+            <SearchableSelect
+              options={categories.map((c) => ({ value: c.kod4, label: `${c.nazov} (${c.kod4})` }))}
+              value={naceParam}
+              onChange={setNaceParam}
+              placeholder="Všetky kategórie"
+              emptyOptionLabel="Všetky kategórie"
+            />
+          </div>
+
+          <div style={{ flex: '1 1 260px' }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Kraj</label>
+            <select
+              value={krajParam}
+              onChange={(e) => setKrajParam(e.target.value)}
+              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', width: '100%' }}
+            >
+              <option value="">Celé Slovensko</option>
+              {kraje.map((k) => (
+                <option key={k.kod} value={k.kod}>
+                  {k.nazovSk}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ flex: '1 1 260px' }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Metrika</label>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={() => setMetricParam('absolute')}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 6,
+                  border: '1px solid #cbd5e1',
+                  background: metricParam === 'absolute' ? '#2563eb' : 'white',
+                  color: metricParam === 'absolute' ? 'white' : '#1e293b',
+                  cursor: 'pointer',
+                }}
+              >
+                Absolútny počet
+              </button>
+              <button
+                onClick={() => setMetricParam('perCapita')}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 6,
+                  border: '1px solid #cbd5e1',
+                  background: metricParam === 'perCapita' ? '#2563eb' : 'white',
+                  color: metricParam === 'perCapita' ? 'white' : '#1e293b',
+                  cursor: 'pointer',
+                }}
+              >
+                Na 1000 obyvateľov
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div
+          style={{
+            background: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: 10,
+            padding: 8,
+            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          <DensityMap
+            densityByDistrict={densityByDistrict}
+            metric={metricParam === 'absolute' ? 'absolute' : 'perCapita'}
+            loading={loading}
+            onDistrictClick={(kod, nazov) => setSelectedDistrict({ kod, nazov })}
+          />
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <DataSourceBanner
+            sources={sources.filter((s) => s.sourceName === 'RPO')}
+            activeCount={stats?.totalActive ?? null}
+          />
+        </div>
+
+        <section id="statistiky" style={{ marginTop: 40, scrollMarginTop: 20 }}>
+          <header style={{ marginBottom: 20 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Štatistiky registra</h2>
+            <p style={{ color: '#64748b', margin: '4px 0 0', fontSize: 14 }}>
+              Zistenia vypočítané z celého registra RPO - okresy, odvetvia, história registrácií.
+              {stats?.computedAt && (
+                <> Prepočítané {new Date(stats.computedAt).toLocaleString('sk-SK')}.</>
+              )}
+            </p>
+          </header>
+
+          {!stats ? (
+            <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Načítavam…</div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+                <StatCard label="Aktívnych firiem" value={stats.totalActive.toLocaleString('sk-SK')} color="#2563eb" />
+                <StatCard label="Zaniknutých firiem" value={stats.totalTerminated.toLocaleString('sk-SK')} color="#94a3b8" />
+                <StatCard
+                  label="Podiel zaniknutých"
+                  value={`${((stats.totalTerminated / (stats.totalActive + stats.totalTerminated)) * 100).toFixed(1)} %`}
+                  color="#dc2626"
+                />
+              </div>
+              <StatsCharts stats={stats} />
+            </>
+          )}
+        </section>
+
+        {selectedDistrict && (
+          <FirmListPanel
+            okresKod={selectedDistrict.kod}
+            okresNazov={selectedDistrict.nazov}
+            naceFilter={naceParam}
+            categories={categories}
+            onClose={() => setSelectedDistrict(null)}
+          />
+        )}
+      </main>
+    </>
+  )
+}
+
+function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div
       style={{
-        maxWidth: 1100,
-        margin: '0 auto',
-        padding: '24px 20px 48px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: '#1e293b',
+        flex: '1 1 200px',
+        background: 'white',
+        border: '1px solid #e2e8f0',
+        borderRadius: 10,
+        padding: '18px 20px',
+        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
       }}
     >
-      <header style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Mapa hustoty firiem</h1>
-        <p style={{ color: '#64748b', margin: '4px 0 0', fontSize: 14 }}>
-          Hustota firiem a živnostníkov na Slovensku podľa okresu a kategórie.
-        </p>
-      </header>
-
-      <section
-        style={{
-          display: 'flex',
-          gap: 16,
-          flexWrap: 'wrap',
-          alignItems: 'flex-end',
-          marginBottom: 16,
-          padding: 16,
-          background: 'white',
-          border: '1px solid #e2e8f0',
-          borderRadius: 10,
-          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-        }}
-      >
-        <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-            Kategória (NACE)
-          </label>
-          <select
-            value={naceParam}
-            onChange={(e) => setNaceParam(e.target.value)}
-            style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', minWidth: 260 }}
-          >
-            <option value="">Všetky kategórie</option>
-            {categories.map((c) => (
-              <option key={c.kod4} value={c.kod4}>
-                {c.nazov} ({c.kod4})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Metrika</label>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button
-              onClick={() => setMetricParam('perCapita')}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 6,
-                border: '1px solid #cbd5e1',
-                background: metricParam === 'perCapita' ? '#2563eb' : 'white',
-                color: metricParam === 'perCapita' ? 'white' : '#1e293b',
-                cursor: 'pointer',
-              }}
-            >
-              Na 1000 obyvateľov
-            </button>
-            <button
-              onClick={() => setMetricParam('absolute')}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 6,
-                border: '1px solid #cbd5e1',
-                background: metricParam === 'absolute' ? '#2563eb' : 'white',
-                color: metricParam === 'absolute' ? 'white' : '#1e293b',
-                cursor: 'pointer',
-              }}
-            >
-              Absolútny počet
-            </button>
-          </div>
-        </div>
-
-        {loading && <span style={{ color: '#94a3b8', fontSize: 13 }}>Načítavam…</span>}
-      </section>
-
-      <div
-        style={{
-          background: 'white',
-          border: '1px solid #e2e8f0',
-          borderRadius: 10,
-          padding: 8,
-          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-        }}
-      >
-        <DensityMap
-          data={geoData}
-          metric={metricParam === 'absolute' ? 'absolute' : 'perCapita'}
-          onDistrictClick={(kod, nazov) => setSelectedDistrict({ kod, nazov })}
-        />
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <DataSourceBanner sources={sources} />
-      </div>
-
-      {selectedDistrict && (
-        <FirmListPanel
-          okresKod={selectedDistrict.kod}
-          okresNazov={selectedDistrict.nazov}
-          naceFilter={naceParam}
-          categories={categories}
-          onClose={() => setSelectedDistrict(null)}
-        />
-      )}
-    </main>
+      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+    </div>
   )
 }
 

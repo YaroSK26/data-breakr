@@ -5,6 +5,7 @@ import { prisma } from '../../../lib/prisma'
 import { upsertDataSource } from '../data-sources'
 import { syncBusinessEntitiesBulk } from './sync-entities-bulk'
 import { recomputeDensity } from './recompute-density'
+import { recomputeStats } from './recompute-stats'
 
 async function main() {
   const runStart = new Date()
@@ -17,6 +18,9 @@ async function main() {
   console.log('Recomputing business density aggregates...')
   const densityResult = await recomputeDensity(prisma)
   console.log(`Recomputed density for ${densityResult.areasComputed} areas.`)
+
+  console.log('Recomputing homepage stats cache...')
+  await recomputeStats(prisma)
 
   const totalEntities = await prisma.businessEntity.count()
   await upsertDataSource(prisma, {

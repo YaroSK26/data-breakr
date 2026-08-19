@@ -19,6 +19,22 @@ model DataSource {
   @@map("data_sources")
 }
 
+// Precomputed /statistiky aggregates (top districts, top categories,
+// registrations-by-year, active/terminated counts) - the underlying
+// GROUP BY queries scan the full 2M+ row business_entities table, so
+// recomputing them on every page load was slow and wasteful for numbers
+// that only change once per ingest run. Recomputed at the end of each
+// RPO ingest (see scripts/ingest/rpo/recompute-stats.ts); the API route
+// just reads this single cached row.
+model StatsCache {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  data        Json
+  computedAt  DateTime @map("computed_at")
+
+  @@map("stats_cache")
+}
+
 model Region {
   kod       String      @id
   nazovSk   String      @map("nazov_sk")
@@ -168,6 +184,16 @@ model BusinessEntity {
   zdrojDat        String?   @map("zdroj_dat")
   lastSyncedAt    DateTime  @default(now()) @map("last_synced_at")
 
+  // Both density aggregation (GROUP BY okres_kod, optionally filtered by
+  // nace_kod4) and the district drill-down list filter on datum_zaniku IS
+  // NULL alongside these - composite indexes so Postgres doesn't have to
+  // scan all 2M+ rows per request. Confirmed live: /api/density took 17s+
+  // without these on the full national dataset.
+  @@index([okresKod, datumZaniku])
+  @@index([naceKod4, datumZaniku])
+  @@index([krajKod, datumZaniku])
+  @@index([ico])
+  @@index([datumVzniku])
   @@map("business_entities")
 }
 
