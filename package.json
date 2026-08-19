@@ -12,7 +12,8 @@
     "ingest:rpo-bulk": "tsx scripts/ingest/rpo/run-bulk.ts",
     "ingest:geo": "tsx scripts/ingest/geo/run.ts",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
