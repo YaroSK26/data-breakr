@@ -9,6 +9,7 @@
     "test": "vitest run",
     "ingest:ruz": "tsx scripts/ingest/ruz/run.ts",
     "ingest:rpo": "tsx scripts/ingest/rpo/run.ts",
+    "ingest:rpo-bulk": "tsx scripts/ingest/rpo/run-bulk.ts",
     "ingest:geo": "tsx scripts/ingest/geo/run.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate"
@@ -24,7 +25,9 @@
     "prisma": "^7.9.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "stream-chain": "^4.2.5",
+    "stream-json": "^3.5.0"
   },
   "devDependencies": {
     "@types/geojson": "^7946.0.16",
