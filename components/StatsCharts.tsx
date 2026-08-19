@@ -34,9 +34,9 @@ export function StatsCharts({ stats }: { stats: Stats }) {
             <YAxis
               type="category"
               dataKey="nazov"
-              width={100}
+              width={118}
               tick={{ fontSize: 11, fill: '#334155' }}
-              tickFormatter={(v: string) => truncate(v, 14)}
+              tickFormatter={(v: string) => truncate(v, 18)}
             />
             <Tooltip
               cursor={false}
