@@ -38,10 +38,27 @@ export function Hero({ activeCount }: HeroProps) {
         }}
       >
         <div style={{ flex: '1 1 420px', minWidth: 280 }}>
-          <h1 style={{ fontSize: 'clamp(30px, 5vw, 46px)', fontWeight: 800, margin: '0 0 18px', lineHeight: 1.15 }}>
+          <h1
+            style={{
+              fontSize: 'clamp(30px, 5vw, 46px)',
+              fontWeight: 800,
+              margin: '0 0 18px',
+              lineHeight: 1.15,
+              textShadow: '0 2px 16px rgba(0,0,0,0.35)',
+            }}
+          >
             Kde na Slovensku podnikajú ľudia?
           </h1>
-          <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: 'rgba(255,255,255,0.82)', maxWidth: 520, margin: '0 0 32px', lineHeight: 1.55 }}>
+          <p
+            style={{
+              fontSize: 'clamp(15px, 2vw, 18px)',
+              color: 'rgba(255,255,255,0.88)',
+              maxWidth: 520,
+              margin: '0 0 32px',
+              lineHeight: 1.55,
+              textShadow: '0 1px 10px rgba(0,0,0,0.3)',
+            }}
+          >
             Otvorená mapa hustoty firiem a živnostníkov podľa okresu a odvetvia - postavená na
             verejnom registri, aktualizovaná priamo z primárneho zdroja.
           </p>
