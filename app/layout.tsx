@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Urbanist, Sora } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
 import "./globals.css";
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AppHeader />
         <div id="main-content" style={{ flex: 1 }}>{children}</div>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );
