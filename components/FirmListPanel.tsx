@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { buttonOutline } from "./buttonStyles";
+import { LEGAL_FORMS } from "@/lib/legalForms";
 
 interface Firm {
   id: string;
@@ -30,6 +31,7 @@ interface FirmListPanelProps {
   okresKod: string;
   okresNazov: string;
   naceFilter: string;
+  formaFilter: string;
   categories: CategoryLookup[];
   onClose: () => void;
 }
@@ -38,6 +40,7 @@ export function FirmListPanel({
   okresKod,
   okresNazov,
   naceFilter,
+  formaFilter,
   categories,
   onClose,
 }: FirmListPanelProps) {
@@ -48,15 +51,16 @@ export function FirmListPanel({
 
   // Local overrides, independent of the map's own filters - browsing
   // inside this panel shouldn't change what's shown on the map itself.
-  // Initialized from the map's current category so the panel starts
+  // Initialized from the map's current filters so the panel starts
   // consistent with what's on screen, but can diverge from there.
   const [localNace, setLocalNace] = useState(naceFilter);
+  const [localForma, setLocalForma] = useState(formaFilter);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
     setOffset(0);
-  }, [okresKod, localNace, debouncedQuery]);
+  }, [okresKod, localNace, localForma, debouncedQuery]);
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedQuery(searchInput.trim()), 300);
@@ -70,6 +74,7 @@ export function FirmListPanel({
       offset: String(offset),
     });
     if (localNace) params.set("nace", localNace);
+    if (localForma) params.set("forma", localForma);
     if (debouncedQuery) params.set("q", debouncedQuery);
     fetch(`/api/firms-in-district?${params.toString()}`)
       .then((r) => r.json())
@@ -78,16 +83,16 @@ export function FirmListPanel({
         setTotal(d.total);
       })
       .finally(() => setLoading(false));
-  }, [okresKod, localNace, debouncedQuery, offset]);
-
-  const categoryName = (kod4: string | null) =>
-    categories.find((c) => c.kod4 === kod4)?.nazov ?? kod4 ?? "-";
+  }, [okresKod, localNace, localForma, debouncedQuery, offset]);
 
   return (
     <div
       style={{
         position: "fixed",
-        top: 0,
+        // Below the fixed app header (65px, z-index 5000) rather than
+        // z-fighting with it - the panel's own close button and district
+        // name were rendering hidden underneath it at top:0.
+        top: 65,
         right: 0,
         bottom: 0,
         width: 440,
@@ -168,6 +173,23 @@ export function FirmListPanel({
               </option>
             ))}
           </select>
+          <select
+            value={localForma}
+            onChange={(e) => setLocalForma(e.target.value)}
+            style={{
+              padding: "7px 10px",
+              borderRadius: 6,
+              border: "1px solid #cbd5e1",
+              fontSize: 13,
+            }}
+          >
+            <option value="">Všetky právne formy</option>
+            {LEGAL_FORMS.map((f) => (
+              <option key={f.kod} value={f.kod}>
+                {f.nazov}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -198,11 +220,6 @@ export function FirmListPanel({
                 <div style={{ fontSize: 12, color: "#64748b" }}>
                   {[f.ulica, f.mesto, f.psc].filter(Boolean).join(", ") || "-"}
                 </div>
-                {!localNace && (
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
-                    {categoryName(f.naceKod4)}
-                  </div>
-                )}
               </div>
               <a
                 href={externalLookupUrl(f)}

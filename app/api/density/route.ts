@@ -17,11 +17,13 @@ interface DensityRow {
 export async function GET(req: NextRequest) {
   const naceKod4 = req.nextUrl.searchParams.get("nace");
   const kraj = req.nextUrl.searchParams.get("kraj");
+  const pravnaForma = req.nextUrl.searchParams.get("forma");
 
   const filters = Prisma.sql`
     be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
     ${naceKod4 ? Prisma.sql`AND be."nace_kod4" = ${naceKod4}` : Prisma.empty}
     ${kraj ? Prisma.sql`AND be."kraj_kod" = ${kraj}` : Prisma.empty}
+    ${pravnaForma ? Prisma.sql`AND be."pravna_forma_kod" = ${pravnaForma}` : Prisma.empty}
   `;
 
   const rows = await prisma.$queryRaw<DensityRow[]>`

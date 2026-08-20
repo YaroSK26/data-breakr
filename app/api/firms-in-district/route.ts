@@ -31,6 +31,7 @@ interface FirmRow {
 export async function GET(req: NextRequest) {
   const okres = req.nextUrl.searchParams.get('okres')
   const nace = req.nextUrl.searchParams.get('nace')
+  const forma = req.nextUrl.searchParams.get('forma')
   const q = req.nextUrl.searchParams.get('q')
   const offset = Number(req.nextUrl.searchParams.get('offset') ?? '0')
 
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
     okres_kod = ${okres}
     AND datum_zaniku IS NULL
     ${nace ? Prisma.sql`AND nace_kod4 = ${nace}` : Prisma.empty}
+    ${forma ? Prisma.sql`AND pravna_forma_kod = ${forma}` : Prisma.empty}
     ${q ? Prisma.sql`AND nazov ILIKE ${'%' + q + '%'}` : Prisma.empty}
   `
 

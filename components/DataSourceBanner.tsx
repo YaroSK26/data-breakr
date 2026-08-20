@@ -41,15 +41,10 @@ export function DataSourceBanner({ sources, activeCount }: DataSourceBannerProps
               {new Date(s.lastSyncedAt).toLocaleDateString("sk-SK")}
             </>
           )}
-          {s.recordsCount !== null && (
-            <>
-              {" "}
-              ({s.recordsCount.toLocaleString("sk-SK")} záznamov
-              {s.sourceName === "RPO" && activeCount != null && (
-                <>, z toho {activeCount.toLocaleString("sk-SK")} aktívnych</>
-              )}
-              )
-            </>
+          {s.sourceName === "RPO" && activeCount != null ? (
+            <> ({activeCount.toLocaleString("sk-SK")} aktívnych firiem)</>
+          ) : (
+            s.recordsCount !== null && <> ({s.recordsCount.toLocaleString("sk-SK")} záznamov)</>
           )}
         </span>
       ))}

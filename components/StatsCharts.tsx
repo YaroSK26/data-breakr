@@ -17,6 +17,19 @@ function truncate(s: string, n: number): string {
   return s.length > n ? s.slice(0, n - 1) + '…' : s
 }
 
+// recharts tick labels are plain SVG <text> with no native hover - a
+// <title> child gives the full untruncated name as a browser tooltip on
+// hover, for the labels that truncate() had to cut short.
+function TruncatedTick({ x, y, payload, angle, textAnchor, maxLen, dy }: any) {
+  const full: string = payload.value
+  return (
+    <text x={x} y={y} dy={dy ?? 4} textAnchor={textAnchor} fontSize={11} fill="#334155" transform={angle ? `rotate(${angle}, ${x}, ${y})` : undefined}>
+      <title>{full}</title>
+      {truncate(full, maxLen)}
+    </text>
+  )
+}
+
 export function StatsCharts({ stats }: { stats: Stats }) {
   return (
     <>
@@ -35,8 +48,7 @@ export function StatsCharts({ stats }: { stats: Stats }) {
               type="category"
               dataKey="nazov"
               width={118}
-              tick={{ fontSize: 11, fill: '#334155' }}
-              tickFormatter={(v: string) => truncate(v, 18)}
+              tick={<TruncatedTick maxLen={18} textAnchor="end" />}
             />
             <Tooltip
               cursor={false}
@@ -60,8 +72,7 @@ export function StatsCharts({ stats }: { stats: Stats }) {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis
               dataKey="nazov"
-              tick={{ fontSize: 11, fill: '#334155' }}
-              tickFormatter={(v: string) => truncate(v, 26)}
+              tick={<TruncatedTick maxLen={26} textAnchor="end" dy={10} angle={-40} />}
               angle={-40}
               textAnchor="end"
               interval={0}
@@ -80,14 +91,21 @@ export function StatsCharts({ stats }: { stats: Stats }) {
       </div>
 
       <div style={CARD_STYLE}>
-        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>Registrácie podľa roku</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>Registrácie podľa roku (od 1995)</h2>
         <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>
           Počet firiem so vznikom v danom roku (aktívne aj odvtedy zaniknuté) - podľa dátumu vzniku v registri
         </p>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={stats.byYear}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis dataKey="rok" tick={{ fontSize: 12, fill: '#64748b' }} />
+            <XAxis
+              dataKey="rok"
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              // recharts' default "auto" interval skips labels
+              // inconsistently (crowds some years, leaves big gaps at
+              // others) - every 2nd year is more predictable to read.
+              interval={1}
+            />
             <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
             <Tooltip formatter={(v) => [Number(v).toLocaleString('sk-SK'), 'firiem']} contentStyle={{ fontSize: 13, borderRadius: 8 }} />
             <Line type="monotone" dataKey="pocet" stroke={BAR_COLOR} strokeWidth={2} dot={false} />

@@ -192,6 +192,7 @@ model BusinessEntity {
   @@index([okresKod, datumZaniku])
   @@index([naceKod4, datumZaniku])
   @@index([krajKod, datumZaniku])
+  @@index([pravnaFormaKod, datumZaniku])
   @@index([ico])
   @@index([datumVzniku])
   @@map("business_entities")

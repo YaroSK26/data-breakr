@@ -79,7 +79,9 @@ export function SearchableSelect({ options, value, onChange, placeholder, emptyO
             border: '1px solid #cbd5e1',
             borderRadius: 8,
             boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
-            zIndex: 2500,
+            // Above the fixed header (5000) - confirmed live, this
+            // dropdown was rendering underneath it near the top of the page.
+            zIndex: 6000,
           }}
         >
           <div

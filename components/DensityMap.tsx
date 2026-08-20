@@ -246,7 +246,6 @@ export function DensityMap({ densityByDistrict, metric, loading, onDistrictClick
                 : 'chýbajú dáta o populácii'}
             </strong>
           </div>
-          <div style={{ marginTop: 6, fontSize: 12, color: '#94a3b8' }}>Klikni pre zoznam firiem v okrese →</div>
         </div>
       )}
     </div>
