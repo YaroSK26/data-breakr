@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Stats } from '@/app/page'
 
@@ -30,7 +31,25 @@ function TruncatedTick({ x, y, payload, angle, textAnchor, maxLen, dy }: any) {
   )
 }
 
+// A fixed interval that looks fine at 1400px crowds badly at 375px - 32
+// years is simply too many labels for a phone screen. Track viewport width
+// and thin the labels further on narrow screens instead.
+function useYearTickInterval(): number {
+  const [interval, setInterval_] = useState(1)
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth
+      setInterval_(w < 480 ? 5 : w < 768 ? 3 : 1)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return interval
+}
+
 export function StatsCharts({ stats }: { stats: Stats }) {
+  const yearTickInterval = useYearTickInterval()
   return (
     <>
       <div style={{ ...CARD_STYLE, paddingLeft: 8 }}>
@@ -103,8 +122,9 @@ export function StatsCharts({ stats }: { stats: Stats }) {
               tick={{ fontSize: 12, fill: '#64748b' }}
               // recharts' default "auto" interval skips labels
               // inconsistently (crowds some years, leaves big gaps at
-              // others) - every 2nd year is more predictable to read.
-              interval={1}
+              // others) - a fixed, viewport-aware interval is predictable
+              // and thins out further on narrow/mobile screens.
+              interval={yearTickInterval}
             />
             <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
             <Tooltip formatter={(v) => [Number(v).toLocaleString('sk-SK'), 'firiem']} contentStyle={{ fontSize: 13, borderRadius: 8 }} />
