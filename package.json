@@ -10,6 +10,7 @@
     "ingest:ruz": "tsx scripts/ingest/ruz/run.ts",
     "ingest:rpo": "tsx scripts/ingest/rpo/run.ts",
     "ingest:rpo-bulk": "tsx scripts/ingest/rpo/run-bulk.ts",
+    "ingest:rpo-daily": "tsx scripts/ingest/rpo/run-daily.ts",
     "ingest:geo": "tsx scripts/ingest/geo/run.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",

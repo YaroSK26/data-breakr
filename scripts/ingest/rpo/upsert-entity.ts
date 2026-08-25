@@ -53,8 +53,8 @@ export async function upsertBusinessEntity(
   detail: RpoEntityDetail,
   fallbackMuni?: FallbackMuni
 ): Promise<void> {
-  const ico = detail.identifiers[0]?.value
-  const nazov = detail.fullNames[detail.fullNames.length - 1]?.value
+  const ico = detail.identifiers?.[0]?.value
+  const nazov = detail.fullNames?.[detail.fullNames.length - 1]?.value
   const naceKod4 = detail.statisticalCodes?.mainActivity?.code
   const pravnaFormaKod = detail.legalForms?.[detail.legalForms.length - 1]?.value.code
 

@@ -53,10 +53,15 @@ export async function recomputeStats(prisma: PrismaClient) {
       ORDER BY pocet DESC
       LIMIT 12
     `,
+    // Upper-bounded at the current year, not just >= 1995 - a handful of
+    // source records carry a datum_vzniku dated into next year (bad/typo
+    // data from RPO, not real future registrations), which would otherwise
+    // show up as a stray bar past "today" on the chart.
     prisma.$queryRaw<YearRow[]>`
       SELECT EXTRACT(YEAR FROM "datum_vzniku")::int AS rok, COUNT(*) AS pocet
       FROM business_entities
-      WHERE "datum_vzniku" IS NOT NULL AND EXTRACT(YEAR FROM "datum_vzniku") >= 1995
+      WHERE "datum_vzniku" IS NOT NULL
+        AND EXTRACT(YEAR FROM "datum_vzniku") BETWEEN 1995 AND EXTRACT(YEAR FROM CURRENT_DATE)
       GROUP BY rok
       ORDER BY rok ASC
     `,
