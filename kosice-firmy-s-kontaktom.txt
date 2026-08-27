@@ -1,0 +1,44 @@
+SUHRN: Z 114 novozalozenych kosickych firiem sa nasiel pouzitelny digitalny kontakt (email/web/socialna siet) len pri 4 firmach. Finstat.sk blokoval automatizovane pristupy (HTTP 403) pri vsetkych pokusoch, takze u vsetkych 114 firiem bol pouzity iba Google/web fallback.
+
+================================================================================
+
+1. AUTOŠKOLA ALFA KE s. r. o.
+   ICO: 57828954
+   Najdene: Existujuca autoskola "AUTOŠKOLA ALFA" / "AUTOŠKOLA A.L.F.A. s.r.o." v Kosiciach (Sturova 7).
+   Web: https://www.autoskolaalfa.sk/
+   Email: info@autoskolaalfa.sk
+   Telefon: 055/699 82 60, 0917 707 070, 0914 330 388
+   Facebook: https://www.facebook.com/autoskolaalfa.sk/
+   Zdroj: Google / web search
+   Poznamka: Nazov novej s.r.o. ("ALFA KE") silne zodpoveda existujucej znacke autoskoly v Kosiciach - pravdepodobne formalizacia existujuceho podnikania do s.r.o.
+
+2. LiveLoveDance s. r. o.
+   ICO: 57787328
+   Najdene: Tanecne studio LiveLoveDance, sidli v Kosice - Zapad (Slobody 20, 040 11 Kosice), co sedi s adresou vzniku firmy.
+   Web: http://livelovedance.sk/
+   Email: info@livelovedance.sk
+   Facebook: https://www.facebook.com/p/LiveLoveDance-61557595095159/
+   Instagram: https://www.instagram.com/livelovedanceconvention/
+   Zdroj: Google / web search
+   Poznamka: Silna zhoda - mestska cast (Zapad) aj nazov presne sedia.
+
+3. Sklenárstvo - BETTY s. r. o.
+   ICO: 57821267
+   Najdene: Existujuca rodinna sklenarska prevadzka "Sklenárstvo Betty" / "Sklenárstvo - BETTY / Šablatúra" v Kosiciach (Kosicka Nova Ves), predtym vedena ako zivnost "Alžbeta Gluchmanová - BETTY".
+   Web: https://sklenarstvokosice.sk/
+   Email: alzbeta.gluchmanova@gmail.com
+   Telefon: +421 907 414 125
+   Facebook: https://www.facebook.com/p/Sklen%C3%A1rstvo-Betty-100041454235934/
+   Zdroj: Google / web search
+   Poznamka: Velmi silna zhoda - vyzera to na formalizaciu existujucej zivnosti do s.r.o.
+
+4. Karine Hiulumian (ziva osoba/zivnostnik)
+   ICO: 57851875
+   Najdene: LinkedIn profil "Karine Hiulumian - Frontend Developer - Freelance | Self Employed"
+   LinkedIn: https://www.linkedin.com/in/karinehiulumian/
+   Zdroj: Google / web search
+   Poznamka: Meno je pomerne nezvycajne (nizke riziko zamenenia s inou osobou) a profesia (freelance frontend developer) zodpoveda profilu clovekaregistrujuceho si zivnost. Ziadny email/telefon verejne dostupny, len LinkedIn.
+
+================================================================================
+
+Ostatnych 110 firiem: pre ziadnu sa nenasiel pouzitelny kontakt (Finstat: nenajdene/blokovane; Google: bud ziadne vysledky, alebo len zhody s inymi/nesuvisiacimi firmami a osobami rovnakeho alebo podobneho mena, ktore sa nedali s istotou priradit k danemu ICO). Tieto firmy su vacsinou len par dni stare (registrovane 18.-25.8.2026), takze este nemali cas vybudovat si online pritomnost.
