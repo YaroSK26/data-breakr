@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 interface DataSourceBannerProps {
   sources: {
     sourceName: string;
@@ -6,9 +8,13 @@ interface DataSourceBannerProps {
     recordsCount: number | null;
   }[];
   activeCount?: number | null;
+  // Caveat about the data itself (which classification revision it is
+  // coded in, known coverage gaps) - belongs with the source line, not
+  // floating above the map.
+  note?: ReactNode;
 }
 
-export function DataSourceBanner({ sources, activeCount }: DataSourceBannerProps) {
+export function DataSourceBanner({ sources, activeCount, note }: DataSourceBannerProps) {
   return (
     <div
       style={{
@@ -51,6 +57,19 @@ export function DataSourceBanner({ sources, activeCount }: DataSourceBannerProps
       <span style={{ marginLeft: "auto", fontStyle: "italic" }}>
         Zahŕňa všetky firmy vrátane živnostníkov (RPO).
       </span>
+      {note && (
+        <p
+          style={{
+            flexBasis: "100%",
+            margin: "4px 0 0",
+            paddingTop: 8,
+            borderTop: "1px solid #e2e8f0",
+            lineHeight: 1.5,
+          }}
+        >
+          {note}
+        </p>
+      )}
     </div>
   );
 }

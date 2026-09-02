@@ -71,6 +71,10 @@ model Municipality {
   @@map("municipalities")
 }
 
+// SK NACE Rev. 2 (2008) subclasses as published by RÚZ. Kept because
+// firms.nace_kod5 (RÚZ's own classifier) is still coded in this revision.
+// Names here are RÚZ's abbreviated variants ("Pestov.obilnín"), max 24
+// chars - not display quality. Nace21Code below is the display source.
 model NaceCode {
   kod5    String @id
   kod4    String
@@ -78,6 +82,39 @@ model NaceCode {
   nazovEn String @map("nazov_en")
 
   @@map("nace_codes")
+}
+
+// NACE Rev. 2.1, the revision RPO has been publishing in
+// statisticalCodes.mainActivity since the 2025 changeover. Full hierarchy
+// (level 1 = section letter, 2 = division, 3 = group, 4 = class), codes
+// stored undotted so "47.12" is "4712" - the same shape RPO uses in
+// business_entities.nace_kod4.
+model Nace21Code {
+  kod        String    @id
+  uroven     Int
+  parentKod  String?   @map("parent_kod")
+  nazovSk    String    @map("nazov_sk")
+  nazovEn    String    @map("nazov_en")
+  skratkaSk  String?   @map("skratka_sk")
+  platnostOd DateTime? @map("platnost_od")
+
+  @@index([uroven])
+  @@index([parentKod])
+  @@map("nace21_codes")
+}
+
+// The ŠÚ SR correspondence table ("prevodník") SKNACE5 -> NACE_2.1_L4:
+// which Rev. 2.1 class each SK NACE Rev. 2 subclass maps to. Not 1:1 -
+// 176 of the 646 Rev. 2 subclasses split across several Rev. 2.1 classes
+// (47.19.0 alone feeds 47.11, 47.12, 47.13 ...), so a row is a candidate
+// mapping, not a rewrite rule.
+model NaceRev2ToRev21 {
+  rev2Kod5  String @map("rev2_kod5")
+  rev21Kod4 String @map("rev21_kod4")
+
+  @@id([rev2Kod5, rev21Kod4])
+  @@index([rev21Kod4])
+  @@map("nace_rev2_to_rev21")
 }
 
 model ReportTemplate {

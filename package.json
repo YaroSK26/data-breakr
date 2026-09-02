@@ -14,7 +14,8 @@
     "ingest:geo": "tsx scripts/ingest/geo/run.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "ingest:nace": "tsx scripts/ingest/nace/run.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

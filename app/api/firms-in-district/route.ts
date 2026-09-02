@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { resolveNaceFilter } from '@/lib/nace'
 
 const PAGE_SIZE = 100
 
@@ -39,10 +40,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Chýba parameter okres.' }, { status: 400 })
   }
 
+  // Same prevodník translation as /api/density - the two must filter on
+  // the same set of codes or the map count and the drill-down list
+  // disagree.
+  const naceCodes = nace ? await resolveNaceFilter(prisma, nace) : []
+
   const filters = Prisma.sql`
     okres_kod = ${okres}
     AND datum_zaniku IS NULL
-    ${nace ? Prisma.sql`AND nace_kod4 = ${nace}` : Prisma.empty}
+    ${naceCodes.length > 0 ? Prisma.sql`AND nace_kod4 IN (${Prisma.join(naceCodes)})` : Prisma.empty}
     ${forma ? Prisma.sql`AND pravna_forma_kod = ${forma}` : Prisma.empty}
     ${q ? Prisma.sql`AND nazov ILIKE ${'%' + q + '%'}` : Prisma.empty}
   `

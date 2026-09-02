@@ -37,3 +37,35 @@ export async function fetchJson<T>(
 
   throw new Error(`fetchJson failed after ${retries} attempts for ${url}: ${lastError}`)
 }
+
+export async function fetchText(
+  url: string,
+  opts: { retries?: number; headers?: Record<string, string>; timeoutMs?: number } = {}
+): Promise<string> {
+  const retries = opts.retries ?? 3
+  // Whole classification exports, not single records: the SK NACE Rev. 2
+  // CSV is ~1.9 MB and ŠÚ SR generates it on the fly, so the 15s default
+  // used for JSON APIs is too tight here.
+  const timeoutMs = opts.timeoutMs ?? 120000
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: 'text/csv, text/plain, */*', ...opts.headers },
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} for ${url}`)
+      }
+      return await res.text()
+    } catch (err) {
+      lastError = err
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 250 * attempt))
+      }
+    }
+  }
+
+  throw new Error(`fetchText failed after ${retries} attempts for ${url}: ${lastError}`)
+}

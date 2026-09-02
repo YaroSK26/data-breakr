@@ -1,0 +1,28 @@
+# .github/workflows/ingest-nace.yml
+#
+# NACE Rev. 2.1 and the SK NACE Rev. 2 prevodník from ŠÚ SR. These are
+# reference codelists that change a few times a year at most (ŠÚ SR keeps
+# both revisions in parallel until 31.12.2028), so weekly is plenty -
+# unlike the entity ingests this pulls two small CSVs and rewrites two
+# small tables.
+name: Ingest NACE klasifikácia
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run ingest:nace
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}

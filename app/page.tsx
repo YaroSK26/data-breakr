@@ -42,9 +42,12 @@ const StatsCharts = dynamic(
   },
 );
 
+// NACE Rev. 2.1 class, as served by /api/categories.
 interface Category {
   kod4: string;
   nazov: string;
+  sekcia: string;
+  sekciaNazov: string;
 }
 
 interface Kraj {
@@ -198,6 +201,7 @@ function MapaHustotyFiriem() {
               options={categories.map((c) => ({
                 value: c.kod4,
                 label: `${c.nazov} (${c.kod4})`,
+                keywords: `${c.sekcia} ${c.sekciaNazov}`,
               }))}
               value={naceParam}
               onChange={setNaceParam}
@@ -331,8 +335,21 @@ function MapaHustotyFiriem() {
 
         <div style={{ marginTop: 16 }}>
           <DataSourceBanner
-            sources={sources.filter((s) => s.sourceName === "RPO")}
+            sources={sources.filter(
+              (s) =>
+                s.sourceName === "RPO" ||
+                s.sourceName === "ŠÚ SR - klasifikácie (NACE)",
+            )}
             activeCount={stats?.totalActive ?? null}
+            note={
+              <>
+                <strong>Klasifikácia: NACE Rev. 2.1 (platná od 2025).</strong>{" "}
+                Kategórie a kódy firiem pochádzajú z RPO, ktorý už používa novú
+                revíziu - staré kódy SK NACE Rev. 2 (napr. 62.01, 70.22, 47.11)
+                v nej neexistujú. Odkazy so starým kódom prevádzame oficiálnym
+                prevodníkom ŠÚ SR.
+              </>
+            }
           />
         </div>
 

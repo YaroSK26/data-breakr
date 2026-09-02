@@ -25,6 +25,19 @@ function externalLookupUrl(firm: Firm): string {
 interface CategoryLookup {
   kod4: string;
   nazov: string;
+  sekcia: string;
+  sekciaNazov: string;
+}
+
+function groupBySection(categories: CategoryLookup[]): [string, CategoryLookup[]][] {
+  const groups = new Map<string, CategoryLookup[]>();
+  for (const c of categories) {
+    const label = `${c.sekcia} - ${c.sekciaNazov}`;
+    const existing = groups.get(label);
+    if (existing) existing.push(c);
+    else groups.set(label, [c]);
+  }
+  return Array.from(groups.entries());
 }
 
 interface FirmListPanelProps {
@@ -167,10 +180,16 @@ export function FirmListPanel({
             }}
           >
             <option value="">Všetky kategórie</option>
-            {categories.map((c) => (
-              <option key={c.kod4} value={c.kod4}>
-                {c.nazov} ({c.kod4})
-              </option>
+            {/* Grouped by NACE section - 617 flat options in a native
+                select are unusable to scroll through. */}
+            {groupBySection(categories).map(([sekciaNazov, items]) => (
+              <optgroup key={sekciaNazov} label={sekciaNazov}>
+                {items.map((c) => (
+                  <option key={c.kod4} value={c.kod4}>
+                    {c.nazov} ({c.kod4})
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           <select

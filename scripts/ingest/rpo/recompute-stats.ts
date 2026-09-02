@@ -32,24 +32,18 @@ export async function recomputeStats(prisma: PrismaClient) {
       WHERE be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
       GROUP BY be."okres_kod", d.nazov_sk
     `,
-    // INNER JOIN, not LEFT: about 1 in 5 active NACE4 codes has no Slovak
-    // name in our nace_codes table (RÚZ's classifier, our only source for
-    // these names, only covers entities that file with RÚZ - RPO reports
-    // more codes than that covers). Showing a bare number like "4712"
-    // instead of a category name isn't useful, so this chart only ranks
-    // categories we can actually label - not a claim that unlabeled
-    // categories don't exist or aren't common.
+    // Named from nace21_codes (NACE Rev. 2.1), the revision RPO codes these
+    // entities in. This used to join RÚZ's SK NACE Rev. 2 list, which had
+    // no name for about 1 in 5 active codes - and because this is a top-12
+    // ranking, the unnamed ones were exactly the biggest categories (4712,
+    // 4335, 7020, 4100), so the chart silently showed 7th-18th place as if
+    // it were 1st-12th.
     prisma.$queryRaw<CategoryCountRow[]>`
-      SELECT be."nace_kod4" AS kod4, nc.nazov AS nazov, COUNT(*) AS pocet
+      SELECT be."nace_kod4" AS kod4, COALESCE(nc.nazov_sk, be."nace_kod4") AS nazov, COUNT(*) AS pocet
       FROM business_entities be
-      JOIN (
-        -- One representative name per 4-digit code - nace_codes stores
-        -- names at 5-digit granularity, so a plain join on kod4 would
-        -- multiply-match and inflate the counts below.
-        SELECT DISTINCT ON (kod4) kod4, nazov_sk AS nazov FROM nace_codes ORDER BY kod4, kod5
-      ) nc ON nc.kod4 = be."nace_kod4"
-      WHERE be."datum_zaniku" IS NULL
-      GROUP BY be."nace_kod4", nc.nazov
+      LEFT JOIN nace21_codes nc ON nc.kod = be."nace_kod4" AND nc.uroven = 4
+      WHERE be."datum_zaniku" IS NULL AND be."nace_kod4" IS NOT NULL
+      GROUP BY be."nace_kod4", nc.nazov_sk
       ORDER BY pocet DESC
       LIMIT 12
     `,

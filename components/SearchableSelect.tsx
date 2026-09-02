@@ -5,6 +5,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 export interface SearchableOption {
   value: string
   label: string
+  // Extra text matched by the filter but not shown - e.g. the NACE section
+  // a class sits in, so typing "stavebníctvo" finds 43.21 even though the
+  // word appears nowhere in that class's own name.
+  keywords?: string
 }
 
 interface SearchableSelectProps {
@@ -44,7 +48,9 @@ export function SearchableSelect({ options, value, onChange, placeholder, emptyO
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!open || !q || q === selectedLabel.toLowerCase()) return options
-    return options.filter((o) => o.label.toLowerCase().includes(q))
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(q) || (o.keywords?.toLowerCase().includes(q) ?? false)
+    )
   }, [options, query, open, selectedLabel])
 
   return (

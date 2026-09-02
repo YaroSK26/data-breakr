@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { resolveNaceFilter } from "@/lib/nace";
 
 interface DensityRow {
   okresKod: string;
@@ -15,13 +16,18 @@ interface DensityRow {
 }
 
 export async function GET(req: NextRequest) {
-  const naceKod4 = req.nextUrl.searchParams.get("nace");
+  const nace = req.nextUrl.searchParams.get("nace");
   const kraj = req.nextUrl.searchParams.get("kraj");
   const pravnaForma = req.nextUrl.searchParams.get("forma");
 
+  // A ?nace= value can still be an SK NACE Rev. 2 code (an older shared
+  // link, or a code copied from RÚZ-sourced data), so run it through the
+  // prevodník instead of matching it literally against Rev. 2.1 data.
+  const naceCodes = nace ? await resolveNaceFilter(prisma, nace) : [];
+
   const filters = Prisma.sql`
     be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
-    ${naceKod4 ? Prisma.sql`AND be."nace_kod4" = ${naceKod4}` : Prisma.empty}
+    ${naceCodes.length > 0 ? Prisma.sql`AND be."nace_kod4" IN (${Prisma.join(naceCodes)})` : Prisma.empty}
     ${kraj ? Prisma.sql`AND be."kraj_kod" = ${kraj}` : Prisma.empty}
     ${pravnaForma ? Prisma.sql`AND be."pravna_forma_kod" = ${pravnaForma}` : Prisma.empty}
   `;
