@@ -299,6 +299,33 @@ model SusrOkresUkazovatel {
   @@map("susr_okres_ukazovatel")
 }
 
+// Zoznam platiteľov DPH z Finančnej správy SR (ds_dphs.zip), plný prepis
+// pri každom dennom ingeste. Kľúčom je IČO - rovnaký ako
+// business_entities.ico, takže sa dá pripojiť priamo bez prevodného
+// číselníka.
+model FsPlatcaDph {
+  ico              String    @id
+  icDph            String?   @map("ic_dph")
+  druhRegistracie  String?   @map("druh_registracie")
+  datumRegistracie DateTime? @map("datum_registracie")
+  platDphOd        DateTime? @map("plat_dph_od")
+
+  @@map("fs_platca_dph")
+}
+
+// Daňoví dlžníci z FS SR (ds_dsdd.zip), agregované na úroveň okresu.
+// Zdrojový zoznam nemá IČO, len meno subjektu (často fyzická osoba) + PSČ +
+// dlžnú sumu - mená sa z dôvodu ochrany súkromia neukladajú, drží sa len
+// súhrn za okres (rovnaký princíp ako pri zaniknutých firmách).
+model FsDanovyDlznikOkres {
+  okresKod      String   @id @map("okres_kod")
+  pocetDlznikov Int      @map("pocet_dlznikov")
+  sumaDlhu      Float    @map("suma_dlhu")
+  aktualizovane DateTime
+
+  @@map("fs_danovy_dlznik_okres")
+}
+
 model BusinessDensityAgg {
   id                        Int      @id @default(autoincrement())
   areaKod                   String   @map("area_kod")

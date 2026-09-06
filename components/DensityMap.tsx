@@ -6,7 +6,7 @@ import type { Layer, StyleFunction } from 'leaflet'
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import 'leaflet/dist/leaflet.css'
 
-export type Metric = 'absolute' | 'perCapita'
+export type Metric = 'absolute' | 'perCapita' | 'dphShare'
 
 interface MunicipalityProps {
   kod: string
@@ -19,6 +19,11 @@ interface MunicipalityProps {
 export interface DistrictDensity {
   pocetPrevadzok: number
   pocetNa1000Obyvatelov: number | null
+  // Percento aktívnych subjektov v okrese, ktoré sú platiteľmi DPH
+  // (Finančná správa SR, spárované cez IČO). Voliteľné - stránky, ktoré
+  // túto metriku nepoužívajú (zaniknuté firmy, štatistiky okresov), ju
+  // nemusia dodávať.
+  podielPlatcovDph?: number | null
 }
 
 // Sequential scale, low -> high, 7 steps for finer visual distinction than
@@ -72,7 +77,7 @@ interface DensityMapProps {
   // zaniknutých firiem), takže popisky sa dajú prebiť. Predvolené hodnoty
   // zodpovedajú pôvodnej mape hustoty.
   popisHodnoty?: string
-  popisLegendy?: { absolute: string; perCapita: string }
+  popisLegendy?: { absolute: string; perCapita: string; dphShare?: string }
 }
 
 export function DensityMap({
@@ -81,7 +86,7 @@ export function DensityMap({
   loading,
   onDistrictClick,
   popisHodnoty = 'Prevádzok',
-  popisLegendy = { absolute: 'Počet firiem', perCapita: 'Na 1000 obyvateľov' },
+  popisLegendy = { absolute: 'Počet firiem', perCapita: 'Na 1000 obyvateľov', dphShare: '% platcov DPH' },
 }: DensityMapProps) {
   const [hovered, setHovered] = useState<(MunicipalityProps & DistrictDensity) | null>(null)
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null)
@@ -102,10 +107,20 @@ export function DensityMap({
       .catch(() => setDistrictBoundaries(null))
   }, [])
 
+  const valueFor = (okresKod: string): number | null => {
+    const d = densityByDistrict?.[okresKod]
+    if (!d) return null
+    if (metric === 'absolute') return d.pocetPrevadzok
+    if (metric === 'dphShare') return d.podielPlatcovDph ?? null
+    return d.pocetNa1000Obyvatelov
+  }
+
   const { scaleMin, scaleMax, maxValue } = useMemo(() => {
     if (!densityByDistrict) return { scaleMin: 0, scaleMax: 0, maxValue: 0 }
     const values = Object.values(densityByDistrict)
-      .map((d) => (metric === 'absolute' ? d.pocetPrevadzok : d.pocetNa1000Obyvatelov))
+      .map((d) =>
+        metric === 'absolute' ? d.pocetPrevadzok : metric === 'dphShare' ? (d.podielPlatcovDph ?? null) : d.pocetNa1000Obyvatelov
+      )
       .filter((v): v is number => v !== null && v !== undefined)
       .sort((a, b) => a - b)
     return {
@@ -114,12 +129,6 @@ export function DensityMap({
       maxValue: values.length > 0 ? values[values.length - 1] : 0,
     }
   }, [densityByDistrict, metric])
-
-  const valueFor = (okresKod: string): number | null => {
-    const d = densityByDistrict?.[okresKod]
-    if (!d) return null
-    return metric === 'absolute' ? d.pocetPrevadzok : d.pocetNa1000Obyvatelov
-  }
 
   const style: StyleFunction<MunicipalityProps> = (feature) => {
     const p = feature?.properties as MunicipalityProps | undefined
@@ -136,7 +145,12 @@ export function DensityMap({
     layer.on({
       mouseover: () => {
         const d = densityByDistrict?.[feature.properties.okresKod]
-        setHovered({ ...feature.properties, pocetPrevadzok: d?.pocetPrevadzok ?? 0, pocetNa1000Obyvatelov: d?.pocetNa1000Obyvatelov ?? null })
+        setHovered({
+          ...feature.properties,
+          pocetPrevadzok: d?.pocetPrevadzok ?? 0,
+          pocetNa1000Obyvatelov: d?.pocetNa1000Obyvatelov ?? null,
+          podielPlatcovDph: d?.podielPlatcovDph,
+        })
       },
       mouseout: () => setHovered(null),
       click: () => onDistrictClick?.(feature.properties.okresKod, feature.properties.okresNazov),
@@ -264,6 +278,14 @@ export function DensityMap({
                 : 'chýbajú dáta o populácii'}
             </strong>
           </div>
+          {hovered.podielPlatcovDph !== undefined && (
+            <div style={{ fontVariantNumeric: 'tabular-nums' }}>
+              Platcov DPH:{' '}
+              <strong>
+                {hovered.podielPlatcovDph !== null ? `${hovered.podielPlatcovDph.toFixed(1)} %` : 'chýbajú dáta'}
+              </strong>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -296,10 +318,12 @@ function Legend({
   scaleMax: number
   maxValue: number
   metric: Metric
-  popisLegendy: { absolute: string; perCapita: string }
+  popisLegendy: { absolute: string; perCapita: string; dphShare?: string }
 }) {
   if (scaleMax <= 0) return null
   const clipped = maxValue > scaleMax
+  const jednotka = metric === 'dphShare' ? ' %' : ''
+  const format = (v: number) => `${metric === 'dphShare' ? v.toFixed(1) : Math.round(v).toLocaleString('sk-SK')}${jednotka}`
   return (
     <div
       style={{
@@ -316,7 +340,7 @@ function Legend({
       }}
     >
       <div style={{ marginBottom: 6, fontWeight: 600 }}>
-        {metric === 'absolute' ? popisLegendy.absolute : popisLegendy.perCapita}
+        {metric === 'absolute' ? popisLegendy.absolute : metric === 'dphShare' ? (popisLegendy.dphShare ?? 'Platcov DPH') : popisLegendy.perCapita}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         {COLOR_SCALE.map((c) => (
@@ -324,15 +348,15 @@ function Legend({
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-        <span>{Math.round(scaleMin).toLocaleString('sk-SK')}</span>
+        <span>{format(scaleMin)}</span>
         <span>
           {clipped ? '≥ ' : ''}
-          {Math.round(scaleMax).toLocaleString('sk-SK')}
+          {format(scaleMax)}
         </span>
       </div>
       {clipped && (
         <div style={{ marginTop: 4, color: '#94a3b8', maxWidth: 160 }}>
-          Škála orezaná na 90. percentil - najvyššia hodnota je {Math.round(maxValue).toLocaleString('sk-SK')}.
+          Škála orezaná na 90. percentil - najvyššia hodnota je {format(maxValue)}.
         </div>
       )}
     </div>

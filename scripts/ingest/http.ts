@@ -69,3 +69,34 @@ export async function fetchText(
 
   throw new Error(`fetchText failed after ${retries} attempts for ${url}: ${lastError}`)
 }
+
+export async function fetchBuffer(
+  url: string,
+  opts: { retries?: number; headers?: Record<string, string>; timeoutMs?: number } = {}
+): Promise<Buffer> {
+  const retries = opts.retries ?? 3
+  // FS SR's ds_dphs.zip runs ~14 MB compressed - same generous window as
+  // fetchText's CSV exports.
+  const timeoutMs = opts.timeoutMs ?? 120000
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: 'application/zip, application/octet-stream, */*', ...opts.headers },
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} for ${url}`)
+      }
+      return Buffer.from(await res.arrayBuffer())
+    } catch (err) {
+      lastError = err
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 250 * attempt))
+      }
+    }
+  }
+
+  throw new Error(`fetchBuffer failed after ${retries} attempts for ${url}: ${lastError}`)
+}

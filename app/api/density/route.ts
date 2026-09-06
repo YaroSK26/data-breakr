@@ -13,6 +13,7 @@ interface DensityRow {
   okresKod: string;
   pocet: bigint;
   population: number | null;
+  pocetPlatcovDph: bigint;
 }
 
 export async function GET(req: NextRequest) {
@@ -36,24 +37,31 @@ export async function GET(req: NextRequest) {
     SELECT
       be."okres_kod" AS "okresKod",
       COUNT(*) AS "pocet",
-      MAX(dp.population) AS "population"
+      MAX(dp.population) AS "population",
+      COUNT(fp.ico) AS "pocetPlatcovDph"
     FROM business_entities be
     LEFT JOIN (
       SELECT district_kod, SUM(population) AS population
       FROM municipalities
       GROUP BY district_kod
     ) dp ON dp.district_kod = be."okres_kod"
+    LEFT JOIN fs_platca_dph fp ON fp.ico = be."ico"
     WHERE ${filters}
     GROUP BY be."okres_kod"
   `;
 
-  const byDistrict: Record<string, { pocetPrevadzok: number; pocetNa1000Obyvatelov: number | null }> = {};
+  const byDistrict: Record<
+    string,
+    { pocetPrevadzok: number; pocetNa1000Obyvatelov: number | null; podielPlatcovDph: number | null }
+  > = {};
   for (const row of rows) {
     const pocet = Number(row.pocet);
     const population = row.population ? Number(row.population) : null;
+    const platcovia = Number(row.pocetPlatcovDph);
     byDistrict[row.okresKod] = {
       pocetPrevadzok: pocet,
       pocetNa1000Obyvatelov: population ? (pocet / population) * 1000 : null,
+      podielPlatcovDph: pocet > 0 ? (platcovia / pocet) * 100 : null,
     };
   }
 

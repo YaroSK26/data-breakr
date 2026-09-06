@@ -37,7 +37,8 @@ const UKAZOVATELE = [
     kod: "ZAMESTNANCI",
     nazov: "Počet zamestnancov",
     jednotka: "",
-    popis: "Priemerný evidenčný počet zamestnancov v podnikoch s 20 a viac zamestnancami.",
+    popis:
+      "Priemerný evidenčný počet zamestnancov v podnikoch s 20 a viac zamestnancami.",
   },
   {
     kod: "PODNIKY",
@@ -116,12 +117,16 @@ export default function StatistikyOkresovPage() {
     if (!data) return null;
     const out: Record<string, DistrictDensity> = {};
     for (const o of data.okresy) {
-      out[o.okresKod] = { pocetPrevadzok: Math.round(o.hodnota), pocetNa1000Obyvatelov: null };
+      out[o.okresKod] = {
+        pocetPrevadzok: Math.round(o.hodnota),
+        pocetNa1000Obyvatelov: null,
+      };
     }
     return out;
   }, [data]);
 
-  const aktualny = UKAZOVATELE.find((u) => u.kod === ukazovatel) ?? UKAZOVATELE[0];
+  const aktualny =
+    UKAZOVATELE.find((u) => u.kod === ukazovatel) ?? UKAZOVATELE[0];
   const najviac = data?.okresy.slice(0, 10) ?? [];
   const najmenej = data ? [...data.okresy].reverse().slice(0, 10) : [];
 
@@ -162,8 +167,8 @@ export default function StatistikyOkresovPage() {
         <strong>Iná klasifikácia než na mape firiem.</strong> Odvetvia sú tu
         sekcie <strong>SK NACE Rev. 2</strong> (A, B, C…), kým register firiem
         beží na novšej <strong>Rev. 2.1</strong>. Písmená sekcií si medzi
-        revíziami nezodpovedajú — napríklad IT je v Rev. 2.1 v sekcii K, v
-        Rev. 2 v sekcii J. Preto sú tieto čísla na vlastnej stránke a nedajú sa
+        revíziami nezodpovedajú - napríklad IT je v Rev. 2.1 v sekcii K, v Rev.
+        2 v sekcii J. Preto sú tieto čísla na vlastnej stránke a nedajú sa
         priamo sčítať s počtami firiem z mapy hustoty. Mzdy a zamestnanci sa
         navyše zisťujú len v podnikoch s 20 a viac zamestnancami, čiže
         živnostníkov a malé firmy nepokrývajú.
@@ -179,7 +184,14 @@ export default function StatistikyOkresovPage() {
         }}
       >
         <div style={{ flex: "1 1 240px" }}>
-          <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+          <label
+            style={{
+              display: "block",
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 4,
+            }}
+          >
             Ukazovateľ
           </label>
           <select
@@ -199,20 +211,38 @@ export default function StatistikyOkresovPage() {
         </div>
 
         <div style={{ flex: "1 1 240px" }}>
-          <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+          <label
+            style={{
+              display: "block",
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 4,
+            }}
+          >
             Odvetvie (sekcia SK NACE Rev. 2)
           </label>
-          <select style={SELECT} value={sekcia} onChange={(e) => setSekcia(e.target.value)}>
+          <select
+            style={SELECT}
+            value={sekcia}
+            onChange={(e) => setSekcia(e.target.value)}
+          >
             {(data?.sekcie ?? [{ kod: "SPOLU", nazov: "Spolu" }]).map((s) => (
               <option key={s.kod} value={s.kod}>
-                {s.kod === "SPOLU" ? s.nazov : `${s.kod} — ${s.nazov}`}
+                {s.kod === "SPOLU" ? s.nazov : `${s.kod} - ${s.nazov}`}
               </option>
             ))}
           </select>
         </div>
 
         <div style={{ flex: "1 1 160px" }}>
-          <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+          <label
+            style={{
+              display: "block",
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 4,
+            }}
+          >
             Rok
           </label>
           <select
@@ -244,8 +274,15 @@ export default function StatistikyOkresovPage() {
             perCapita: aktualny.nazov,
           }}
         />
-        <p style={{ padding: "10px 12px 4px", margin: 0, fontSize: 12, color: "#64748b" }}>
-          Farba obce zodpovedá hodnote jej okresu — ŠÚ SR tieto ukazovatele
+        <p
+          style={{
+            padding: "10px 12px 4px",
+            margin: 0,
+            fontSize: 12,
+            color: "#64748b",
+          }}
+        >
+          Farba obce zodpovedá hodnote jej okresu - ŠÚ SR tieto ukazovatele
           zverejňuje po okresy, nie po obce. Biele okresy nemajú za daný rok a
           odvetvie zverejnenú hodnotu (ŠÚ SR ju tají pri malom počte subjektov).
         </p>
@@ -260,10 +297,19 @@ export default function StatistikyOkresovPage() {
             <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 12px" }}>
               {tabulka.titul}
             </h2>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 14,
+              }}
+            >
               <tbody>
                 {tabulka.data.map((o) => (
-                  <tr key={o.okresKod} style={{ borderTop: "1px solid #e2e8f0" }}>
+                  <tr
+                    key={o.okresKod}
+                    style={{ borderTop: "1px solid #e2e8f0" }}
+                  >
                     <td style={{ padding: "7px 4px" }}>{o.nazov}</td>
                     <td
                       style={{
@@ -296,7 +342,7 @@ export default function StatistikyOkresovPage() {
         )}
         note={
           <>
-            Údaje sú ročné a ŠÚ SR ich spätne reviduje — pri každom sťahovaní sa
+            Údaje sú ročné a ŠÚ SR ich spätne reviduje - pri každom sťahovaní sa
             celý ukazovateľ prepisuje nanovo, nie dopĺňa.
           </>
         }

@@ -12,6 +12,7 @@ interface Firm {
   mesto: string | null;
   psc: string | null;
   naceKod4: string | null;
+  platcaDph: boolean;
 }
 
 function externalLookupUrl(firm: Firm): string {
@@ -233,8 +234,24 @@ export function FirmListPanel({
               }}
             >
               <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
                   {f.nazov?.replace(/["„”]/g, "") ?? "(bez názvu)"}
+                  {f.platcaDph && (
+                    <span
+                      title="Platiteľ DPH (Finančná správa SR)"
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "#166534",
+                        background: "#dcfce7",
+                        padding: "1px 6px",
+                        borderRadius: 999,
+                        flexShrink: 0,
+                      }}
+                    >
+                      DPH
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 12, color: "#64748b" }}>
                   {[f.ulica, f.mesto, f.psc].filter(Boolean).join(", ") || "-"}

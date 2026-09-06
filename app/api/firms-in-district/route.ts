@@ -27,6 +27,7 @@ interface FirmRow {
   mesto: string | null
   psc: string | null
   naceKod4: string | null
+  platcaDph: boolean
 }
 
 export async function GET(req: NextRequest) {
@@ -64,7 +65,9 @@ export async function GET(req: NextRequest) {
   const [totalRows, firms] = await Promise.all([
     prisma.$queryRaw<{ cnt: bigint }[]>`SELECT COUNT(*) AS cnt FROM (${dedupedCte}) x`,
     prisma.$queryRaw<FirmRow[]>`
-      SELECT * FROM (${dedupedCte}) x
+      SELECT x.*, (fp.ico IS NOT NULL) AS "platcaDph"
+      FROM (${dedupedCte}) x
+      LEFT JOIN fs_platca_dph fp ON fp.ico = x.ico
       ORDER BY nazov ASC
       LIMIT ${PAGE_SIZE} OFFSET ${offset}
     `,

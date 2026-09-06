@@ -139,8 +139,7 @@ export default function ZaniknuteFirmyPage() {
       .filter((o) => o.zaniklo + o.aktivnych > 500)
       .map((o) => ({
         nazov: o.nazov,
-        podiel:
-          Math.round((o.zaniklo / (o.zaniklo + o.aktivnych)) * 1000) / 10,
+        podiel: Math.round((o.zaniklo / (o.zaniklo + o.aktivnych)) * 1000) / 10,
       }))
       .sort((a, b) => b.podiel - a.podiel)
       .slice(0, 12);
@@ -164,8 +163,8 @@ export default function ZaniknuteFirmyPage() {
           Zaniknuté firmy
         </h1>
         <p style={{ color: "#64748b", margin: "6px 0 0", fontSize: 15 }}>
-          Koľko subjektov na Slovensku zaniklo, kde, v akom odvetví a ako
-          dlho firmy prežívajú. Dáta z registra RPO od roku {" "}
+          Koľko subjektov na Slovensku zaniklo, kde, v akom odvetví a ako dlho
+          firmy prežívajú. Dáta z registra RPO od roku{" "}
           {data?.poRokoch[0]?.rok ?? 1995}.
         </p>
       </header>
@@ -189,9 +188,9 @@ export default function ZaniknuteFirmyPage() {
         }}
       >
         <strong>Ako čítať tieto čísla.</strong> Zaniknuté subjekty držíme len
-        ako súhrny (počty podľa okresu, odvetvia, právnej formy a roku), nie
-        ako jednotlivé firmy — nedá sa tu preto vyhľadať konkrétna zaniknutá
-        firma. Rebríček odvetví stojí na zlomku dát:{" "}
+        ako súhrny (počty podľa okresu, odvetvia, právnej formy a roku), nie ako
+        jednotlivé firmy - nedá sa tu preto vyhľadať konkrétna zaniknutá firma.
+        Rebríček odvetví stojí na zlomku dát:{" "}
         <strong>RPO priradilo odvetvie len {pokrytiePct} %</strong> zaniknutých
         subjektov ({data?.pokrytieNace.sOdvetvim.toLocaleString("sk-SK")} z{" "}
         {data?.pokrytieNace.spolu.toLocaleString("sk-SK")}), takže hovorí o
@@ -203,7 +202,7 @@ export default function ZaniknuteFirmyPage() {
           Koľko subjektov ročne zanikne
         </h2>
         <p style={{ color: "#64748b", margin: "0 0 14px", fontSize: 13 }}>
-          Posledný rok je neúplný — beží.
+          Posledný rok je neúplný - beží.
         </p>
         <div style={{ height: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -232,8 +231,8 @@ export default function ZaniknuteFirmyPage() {
           Ako dlho firmy prežívajú
         </h2>
         <p style={{ color: "#64748b", margin: "0 0 14px", fontSize: 13 }}>
-          Podiel subjektov z daného ročníka, ktoré po N rokoch ešte
-          existovali. Ročník {KOHORTY[0]} má za sebou najdlhšiu históriu,{" "}
+          Podiel subjektov z daného ročníka, ktoré po N rokoch ešte existovali.
+          Ročník {KOHORTY[0]} má za sebou najdlhšiu históriu,{" "}
           {KOHORTY[KOHORTY.length - 1]} zatiaľ len pár rokov.
         </p>
         <div style={{ height: 280 }}>
@@ -371,7 +370,7 @@ export default function ZaniknuteFirmyPage() {
           }}
         >
           Podiel = zaniknuté / (zaniknuté + dnes aktívne) v okrese. Farba obce
-          zodpovedá hodnote jej okresu — zaniknuté subjekty evidujeme len po
+          zodpovedá hodnote jej okresu - zaniknuté subjekty evidujeme len po
           okres, nie po obec.
         </p>
       </section>
@@ -393,12 +392,7 @@ export default function ZaniknuteFirmyPage() {
                 fontSize={11}
                 tickFormatter={(v) => `${v} %`}
               />
-              <YAxis
-                type="category"
-                dataKey="nazov"
-                fontSize={11}
-                width={90}
-              />
+              <YAxis type="category" dataKey="nazov" fontSize={11} width={90} />
               <Tooltip formatter={(v) => [`${v} %`, "zaniknutých"]} />
               <Bar dataKey="podiel" fill="#2563eb" radius={[0, 3, 3, 0]} />
             </BarChart>
@@ -453,7 +447,9 @@ export default function ZaniknuteFirmyPage() {
         <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>
           Podľa právnej formy
         </h2>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+        <table
+          style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}
+        >
           <thead>
             <tr style={{ textAlign: "left", color: "#64748b", fontSize: 12 }}>
               <th style={{ padding: "6px 8px" }}>Právna forma</th>
@@ -488,7 +484,7 @@ export default function ZaniknuteFirmyPage() {
         note={
           <>
             Zaniknuté subjekty sú v databáze uložené ako súhrny, nie ako
-            jednotlivé záznamy — detail konkrétnej zaniknutej firmy sa dá
+            jednotlivé záznamy - detail konkrétnej zaniknutej firmy sa dá
             kedykoľvek dohľadať priamo v RPO.
           </>
         }

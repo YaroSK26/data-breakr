@@ -1,0 +1,25 @@
+# .github/workflows/ingest-fs.yml
+#
+# Finančná správa SR: platitelia DPH a agregát daňových dlžníkov. Oba
+# zoznamy FS SR aktualizuje denne.
+name: Ingest Finančná správa SR
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run ingest:fs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
