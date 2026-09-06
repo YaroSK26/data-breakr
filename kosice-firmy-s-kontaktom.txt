@@ -1,44 +1,177 @@
-SUHRN: Z 114 novozalozenych kosickych firiem sa nasiel pouzitelny digitalny kontakt (email/web/socialna siet) len pri 4 firmach. Finstat.sk blokoval automatizovane pristupy (HTTP 403) pri vsetkych pokusoch, takze u vsetkych 114 firiem bol pouzity iba Google/web fallback.
+KOSICKE NOVE FIRMY - DOHLADANE KONTAKTY
+Posledna aktualizacia: 2026-09-06
+Rozsah: firmy s datumom vzniku 2026-08-17 az 2026-09-06, okresy Kosice I-IV + Kosice-okolie (346 subjektov)
+Zdroje: RPO (api.statistics.sk - konatelia a predmet cinnosti), web search (Google/Firecrawl), webstranky firiem, katalogy (Azet, Zoznam, Zlate stranky), obecne stranky
+
+SUHRN
+- 346 preverovanych subjektov, z toho 142 s.r.o./druzstiev, zvysok zivnostnici.
+- 7 firiem ma priamy email, 3 dalsie maju len telefon, 6 dalsich ma dohladatelnu osobu (LinkedIn/FB/IG) bez emailu.
+- Zvysok (~330) nema ziadnu verejnu online stopu - vacsina vznikla pred menej nez dvoma tyzdnami.
+- Oproti kolu z 2026-08-25 (vtedy 4 kontakty zo 114 firiem) pribudlo 6 novych pouzitelnych kontaktov; vsetky 4 povodne su k 2026-09-06 stale platne.
+- Metodicka poznamka: finstat.sk aj tentokrat blokoval automatizovany pristup, ale jeho vypisy sa daju precitat cez vysledky vyhladavania. Nove firmy sa daju parovat na existujuce podnikanie cez meno konatela z RPO - to je najucinnejsi postup, samotny nazov novej s.r.o. najde len registrove agregatory (finstat/valida/finreg/prever.to), ktore kontakt neobsahuju.
 
 ================================================================================
+A. FIRMY S PRIAMYM EMAILOM (7)
+================================================================================
 
-1. AUTOŠKOLA ALFA KE s. r. o.
-   ICO: 57828954
-   Najdene: Existujuca autoskola "AUTOŠKOLA ALFA" / "AUTOŠKOLA A.L.F.A. s.r.o." v Kosiciach (Sturova 7).
+1. fairyy cakes s. r. o.                                                  [NOVE]
+   ICO: 57784736 | vznik: 2026-08-28 | Druzstevna pri Hornade
+   Konatel (RPO): Henrieta Sajgalova
+   Web: https://fairyycakes.sk/
+   Email: mnam@fairyycakes.sk
+   Telefon: +421 902 371 085
+   Adresa z webu: Zahradna 435/36, 044 31 Druzstevna pri Hornade
+   Zhoda: velmi silna - meno konatelky aj obec sedia s kontaktnou stranou webu.
+   Poznamka: existujuca cukrarska vyroba (Henrieta Sajgalova - fairyy cakes) sa formalizuje do s.r.o.
+
+2. JUDr. Peter Paulinsky, advokat, s. r. o.                               [NOVE]
+   ICO: 57845468 | vznik: 2026-08-19 | Jana Hunyadiho 1339/9, Moldava nad Bodvou
+   Konatel (RPO): JUDr. Peter Paulinsky
+   Web: http://www.paulinsky.sk/
+   Email: ak.paulinsky@gmail.com
+   Zdroj: Zoznam.sk katalog + fakturacne zaznamy obci (obecnovacany.sk)
+   Zhoda: velmi silna - advokat s tou istou adresou uz podnika ako FO (ICO 42239630), teraz zaklada s.r.o.
+
+3. JUDr. Zuzana CHOMOVA, advokatska kancelaria s. r. o.                   [NOVE]
+   ICO: 57863237 | vznik: 2026-08-28 | Jenisejska 1435/61, Kosice - Nad jazerom
+   Konatel (RPO): JUDr. Zuzana Chomova
+   Email: chomova.zuzanaak@gmail.com
+   Telefon: +421 903 461 863
+   Zdroj: advokati.digital, epravo.sk, saxareal.sk (spolupraca s realitkou)
+   Zhoda: velmi silna - to iste meno uz podnika ako "JUDr. Zuzana Chomova, advokatka" (ICO 55225501).
+
+4. AUTO-VALAS Services s. r. o.                                           [NOVE]
+   ICO: 57794715 | vznik: 2026-08-19 | Presovska cesta 2198/79, Kosice - Dargovskych hrdinov
+   Konatelia (RPO): Ing. Elena Valasova, Ing. Peter Valas, Ing. Stefan Valas, Ing. Veronika Valas Zvarova
+   Web: https://www.autovalas.sk/
+   Email: recepciatoyota@autovalas.sk , recepciaskoda@autovalas.sk
+   Telefon: 055/789 70 62 , +421 940 509 418
+   Facebook: https://www.facebook.com/autovalas/
+   Zhoda: velmi silna - adresa aj priezvisko sedia na existujucu dealersku skupinu AUTO-VALAS GROUP (Toyota/Lexus/Kia/BYD/Skoda), na trhu od 1993.
+
+5. Invelogy Robotics s. r. o.                                             [NOVE]
+   ICO: 57845115 | vznik: 2026-09-01 | Ruskov (okres Kosice-okolie)
+   Konatelia (RPO): Ing. Frantisek Ferko, Ing. Jozef Orenic, Jan Ridarsky
+   Web: https://www.invelogy.sk/
+   Email: info@invelogy.sk
+   Telefon: +421 917 385 571
+   Prevadzka z webu: Werferova 1, 040 11 Kosice
+   LinkedIn (CEO): https://sk.linkedin.com/in/jozef-orenic
+   Facebook: https://www.facebook.com/invelogy/ | Instagram: @invelogy
+   Zhoda: velmi silna - Jozef Orenic je CEO existujucej Invelogy s.r.o. (robotika, oficialny distributor DeepRobotics pre SK/CZ).
+
+6. AUTOSKOLA ALFA KE s. r. o.                              [z 2026-08-25, overene znova]
+   ICO: 57828954 | Kosice
+   Konatel (RPO): Ing. Jozef Tomco
    Web: https://www.autoskolaalfa.sk/
    Email: info@autoskolaalfa.sk
-   Telefon: 055/699 82 60, 0917 707 070, 0914 330 388
+   Telefon: 055/699 82 60 , 0917 707 070 , 0914 330 388
    Facebook: https://www.facebook.com/autoskolaalfa.sk/
-   Zdroj: Google / web search
-   Poznamka: Nazov novej s.r.o. ("ALFA KE") silne zodpoveda existujucej znacke autoskoly v Kosiciach - pravdepodobne formalizacia existujuceho podnikania do s.r.o.
+   Zhoda: silna - existujuca AUTOSKOLA A.L.F.A. s.r.o., Sturova 7 / Sturova 14, Kosice.
 
-2. LiveLoveDance s. r. o.
-   ICO: 57787328
-   Najdene: Tanecne studio LiveLoveDance, sidli v Kosice - Zapad (Slobody 20, 040 11 Kosice), co sedi s adresou vzniku firmy.
-   Web: http://livelovedance.sk/
-   Email: info@livelovedance.sk
-   Facebook: https://www.facebook.com/p/LiveLoveDance-61557595095159/
-   Instagram: https://www.instagram.com/livelovedanceconvention/
-   Zdroj: Google / web search
-   Poznamka: Silna zhoda - mestska cast (Zapad) aj nazov presne sedia.
-
-3. Sklenárstvo - BETTY s. r. o.
-   ICO: 57821267
-   Najdene: Existujuca rodinna sklenarska prevadzka "Sklenárstvo Betty" / "Sklenárstvo - BETTY / Šablatúra" v Kosiciach (Kosicka Nova Ves), predtym vedena ako zivnost "Alžbeta Gluchmanová - BETTY".
+7. Sklenarstvo - BETTY s. r. o.                            [z 2026-08-25, overene znova]
+   ICO: 57821267 | vznik: 2026-08-24 | Kosice - Sever
    Web: https://sklenarstvokosice.sk/
-   Email: alzbeta.gluchmanova@gmail.com
-   Telefon: +421 907 414 125
+   Email: alzbeta.gluchmanova@gmail.com , jemineon@gmail.com , gerdyglucky@gmail.com
+   Telefon: +421 907 414 125 , +421 905 958 845 , +421 907 945 203
    Facebook: https://www.facebook.com/p/Sklen%C3%A1rstvo-Betty-100041454235934/
-   Zdroj: Google / web search
-   Poznamka: Velmi silna zhoda - vyzera to na formalizaciu existujucej zivnosti do s.r.o.
-
-4. Karine Hiulumian (ziva osoba/zivnostnik)
-   ICO: 57851875
-   Najdene: LinkedIn profil "Karine Hiulumian - Frontend Developer - Freelance | Self Employed"
-   LinkedIn: https://www.linkedin.com/in/karinehiulumian/
-   Zdroj: Google / web search
-   Poznamka: Meno je pomerne nezvycajne (nizke riziko zamenenia s inou osobou) a profesia (freelance frontend developer) zodpoveda profilu clovekaregistrujuceho si zivnost. Ziadny email/telefon verejne dostupny, len LinkedIn.
+   Zhoda: velmi silna - formalizacia zivnosti "Alzbeta Gluchmanova - BETTY" do s.r.o.
+   Novinka oproti minulemu kolu: web uvadza uz dva dalsie emaily a treti telefon.
 
 ================================================================================
+B. FIRMY LEN S TELEFONOM / KATALOGOVYM ZAZNAMOM (3)
+================================================================================
 
-Ostatnych 110 firiem: pre ziadnu sa nenasiel pouzitelny kontakt (Finstat: nenajdene/blokovane; Google: bud ziadne vysledky, alebo len zhody s inymi/nesuvisiacimi firmami a osobami rovnakeho alebo podobneho mena, ktore sa nedali s istotou priradit k danemu ICO). Tieto firmy su vacsinou len par dni stare (registrovane 18.-25.8.2026), takze este nemali cas vybudovat si online pritomnost.
+8. AGRO PLUS Budimir spol. s. r. o.                                       [NOVE]
+   ICO: 57853916 | vznik: 2026-08-24 | Hospodarsky dvor 515, Budimir
+   Konatelia (RPO): Ing. Peter Kiss, Ing. Tomas Dargo
+   Telefon: 0905 638 805 , 0905 896 547
+   Zdroj: oficialna stranka obce Budimir (sekcia Sluzby a firmy)
+   Cinnost: polnohospodarska vyroba - obilie, osivo, ovocinarstvo, chov zvierat
+   Zhoda: silna - existujuca AGRO PLUS spol. s r.o. na tej istej adrese, prijemca projektov PRV SR, ziadatel o prenajom pody na SPF. Email verejne nikde.
+
+9. MEDICON s. r. o. + MEDISAMO s. r. o.                                   [NOVE]
+   ICO: 57835888 (vznik 2026-08-24) a 57835781 (vznik 2026-08-26), obe Kosice - Stare Mesto
+   Konatel oboch (RPO): MUDr. Peter Beck
+   Dohladane: MUDr. Peter Beck, MPH, MHA - lekar OAIM Univerzitnej nemocnice L. Pasteura Kosice, prevadzka Rastislavova 43, Kosice-Juh (Dovera: zmluvny lekar)
+   Telefon (oddelenie): 055/615 2002 | Email (oddelenie): oaim@unlp.sk
+   Poznamka: ide o institucionalny kontakt na oddelenie, nie osobny. Dve nove s.r.o. s rovnakym konatelom v tom istom tyzdni.
+
+10. VINTAU 1 s. r. o.                                                     [NOVE]
+    ICO: 57816719 | vznik: 2026-08-19 | Plzenska 2433/2B, Kosice - Zapad | NACE 5630 Sluzby pohostinstiev
+    Dohladane: na tej istej adrese je v katalogoch Azet a Diva vedena VINTAU s.r.o. (restauracie a stravovanie)
+    Zdroj: azet.sk katalog gastro Kosice
+    Poznamka: kontaktne udaje su az za formularom katalogu, priamy email/telefon sa nepodarilo ziskat. Ide zjavne o rozsirenie existujucej gastro prevadzky.
+
+================================================================================
+C. FIRMY S DOHLADATELNOU OSOBOU, BEZ EMAILU (6)
+================================================================================
+
+11. LiveLoveDance s. r. o.                                 [z 2026-08-25, ciastocne overene]
+    ICO: 57787328 | Kosice - Zapad (Slobody 20)
+    Dohladane: tanecne studio LiveLoveDance Kosice - aktivna FB skupina "LiveLoveDance Community",
+    Instagram, rezervacny system https://services.bookio.com/livelovedance/
+    Email z minuleho kola: info@livelovedance.sk - dnes sa nepodarilo znovu potvrdit (stranka livelovedance.sk
+    sa vo vysledkoch neobjavila, vyhladavanie prekryvaju rovnomenne studia v USA). Pouzit opatrne.
+
+12. Ranc pod Sninskym kamenom s. r. o.                                    [NOVE]
+    ICO: 57879966 | vznik: 2026-09-04 | sidlo Kosice - Zapad
+    Dohladane: existujuci Ranc pod Sninskym kamenom (jazdenie na konoch), vedeny v turistickom
+    informacnom centre mesta Snina; osoba spojena s rancom: Majo Antolik (Instagram @majkoantolik)
+    Poznamka: sidlo firmy je v Kosiciach, prevadzka pri Snine. Email nikde, kontakt cez IG/FB alebo TIC Snina (0910 480 350, info@regionpoloniny.sk).
+
+13. Karine Hiulumian (zivnostnicka)                        [z 2026-08-25, overene znova]
+    ICO: 57851875 | vznik: 2026-08-19 | Kosice - Zapad, Sokolovska 10
+    LinkedIn: https://sk.linkedin.com/in/karinehiulumian ("Senior Frontend Developer | React | TypeScript")
+    Poznamka: profil je aktualny, NACE 6210 (pocitacove programovanie) sedi. Kontakt len cez LinkedIn.
+
+14. Brutus Studio s. r. o.                                                [NOVE]
+    ICO: 57820104 | vznik: 2026-08-19 | Cesta pod Hradovou 798/35, Kosice - Sever | NACE 7311 reklamne agentury
+    Konatel (RPO): Ing. Peter Brutovsky
+    LinkedIn: https://sk.linkedin.com/in/peter-brutovsk%C3%BD-a8522673 (Graphic & UX/UI designer, predtym Hi-Reklama 2005-2016)
+    Facebook: https://www.facebook.com/peter.brutovsky/
+    Poznamka: skuseny grafik zakladajuci vlastne studio - profil sedi na NACE. Email nikde.
+
+15. Klembarastav s. r. o.                                                 [NOVE]
+    ICO: 57842515 | vznik: 2026-09-01 | Kosice - Nad jazerom
+    Dohladane: priezvisko Klembara je v kosickom stavebnictve zabehnute - Ing. Anton Klembara (Tobau s.r.o.,
+    Strazna 373, Kosice, od 2013, dokoncovacie stavebne prace), Jan Klembara - KLEMBAU, Ondrej Klembara.
+    Poznamka: konkretne prepojenie na novu s.r.o. nie je potvrdene, len zhoda priezviska a odboru.
+
+16. LocalMind s. r. o.                                                    [NOVE]
+    ICO: 57822301 | vznik: 2026-08-19 | Jasuschova 1188/26, Kosice - KVP | NACE 6220 IT poradenstvo
+    Konatel: Ing. Alex Gajdos
+    Poznamka: nazov znie ako produktovy/AI projekt, ale ziadny web, socialna siet ani profil sa zatial nenasli.
+
+================================================================================
+D. PREVERENE BEZ VYSLEDKU (vyber)
+================================================================================
+Nasledujuce firmy maju zaujimavy nazov alebo odbor, ale k 2026-09-06 nemaju ziadnu verejnu stopu
+mimo registrovych agregatorov (finstat/valida/finreg/prever.to/efirma), ktore kontakt neobsahuju:
+
+   Trion Studios s. r. o. (57816115, konatelia Ing. Jozef Illar, Oliver Kerekes)
+   LevelUP Collective s. r. o. (57819670, kulturne zariadenia)
+   Tactical Plus PDR, s. r. o. (57834989, oprava karoserii bez lakovania)
+   DTF TechPrint s. r. o. (57816425, konatelka Simona Soligova, potlac)
+   3KA Studio s. r. o. (57794812, architektura, konatel Anatolii Kuhal)
+   M2 Servis s. r. o. (57772541, cistenie odpadovych vod, konatelka Miroslava Bujnakova)
+   Olach BAU, s. r. o. (57805962, konatel Jan Olach)
+   MOKOS group s. r. o. (57815950, nakladna doprava, konatel Marko Mokos)
+   DAN-MONT Slovakia s. r. o. (57819602)
+   Praca Snov s. r. o. (57835489)
+   Abso bar s. r. o. (57835179), Welh s. r. o. (57828482), Ruela s. r. o. (57817243) - gastro
+   IGNIS PROTECT s. r. o. (57818801) - vysledky prekryva rovnomenny produkt Schiedel
+   Imperial Office Space s. r. o. (57804532), dreamglass studio s. r. o. (57841985),
+   Cassovia Advisory s. r. o. (57875766) - pozor, starsia "Cassovia Advisory Group, s.r.o." je zrusena od 2022,
+   nejde o ten isty subjekt.
+
+Serie 7-KE-151 az 7-KE-163 s. r. o. (Jenisejska, Kosice - Nad jazerom) su ocividne predzalozene
+"ready-made" schranky jedneho zakladatela - nemá zmysel ich oslovovat ako beznych klientov.
+
+================================================================================
+E. KDE SU DALSIE DATA
+================================================================================
+   nove-firmy-kosice-log.txt   - denny log novych kosickych firiem (kto, kedy, ICO, okres)
+   kosice-leady.txt            - vsetkych 346 firiem obohatenych o konatelov a predmet cinnosti z RPO
+                                 (generuje: npx tsx scripts/kosice-leads.ts --od 2026-08-18)
+   tento subor                 - vysledky rucneho dohladavania kontaktov
