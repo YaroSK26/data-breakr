@@ -68,9 +68,21 @@ interface DensityMapProps {
   metric: Metric
   loading?: boolean
   onDistrictClick?: (okresKod: string, okresNazov: string) => void
+  // Mapa sa používa aj pre iné veličiny než počet prevádzok (napr. počty
+  // zaniknutých firiem), takže popisky sa dajú prebiť. Predvolené hodnoty
+  // zodpovedajú pôvodnej mape hustoty.
+  popisHodnoty?: string
+  popisLegendy?: { absolute: string; perCapita: string }
 }
 
-export function DensityMap({ densityByDistrict, metric, loading, onDistrictClick }: DensityMapProps) {
+export function DensityMap({
+  densityByDistrict,
+  metric,
+  loading,
+  onDistrictClick,
+  popisHodnoty = 'Prevádzok',
+  popisLegendy = { absolute: 'Počet firiem', perCapita: 'Na 1000 obyvateľov' },
+}: DensityMapProps) {
   const [hovered, setHovered] = useState<(MunicipalityProps & DistrictDensity) | null>(null)
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null)
   const [districtBoundaries, setDistrictBoundaries] = useState<FeatureCollection | null>(null)
@@ -216,7 +228,13 @@ export function DensityMap({ densityByDistrict, metric, loading, onDistrictClick
         </div>
       )}
 
-      <Legend scaleMin={scaleMin} scaleMax={scaleMax} maxValue={maxValue} metric={metric} />
+      <Legend
+        scaleMin={scaleMin}
+        scaleMax={scaleMax}
+        maxValue={maxValue}
+        metric={metric}
+        popisLegendy={popisLegendy}
+      />
 
       {hovered && (
         <div
@@ -236,7 +254,7 @@ export function DensityMap({ densityByDistrict, metric, loading, onDistrictClick
           <strong>{hovered.nazov}</strong>
           <div style={{ color: '#64748b' }}>okres {hovered.okresNazov}</div>
           <div style={{ marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
-            Prevádzok: <strong>{hovered.pocetPrevadzok.toLocaleString('sk-SK')}</strong>
+            {popisHodnoty}: <strong>{hovered.pocetPrevadzok.toLocaleString('sk-SK')}</strong>
           </div>
           <div style={{ fontVariantNumeric: 'tabular-nums' }}>
             Na 1000 obyv.:{' '}
@@ -272,11 +290,13 @@ function Legend({
   scaleMax,
   maxValue,
   metric,
+  popisLegendy,
 }: {
   scaleMin: number
   scaleMax: number
   maxValue: number
   metric: Metric
+  popisLegendy: { absolute: string; perCapita: string }
 }) {
   if (scaleMax <= 0) return null
   const clipped = maxValue > scaleMax
@@ -296,7 +316,7 @@ function Legend({
       }}
     >
       <div style={{ marginBottom: 6, fontWeight: 600 }}>
-        {metric === 'absolute' ? 'Počet firiem' : 'Na 1000 obyvateľov'}
+        {metric === 'absolute' ? popisLegendy.absolute : popisLegendy.perCapita}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         {COLOR_SCALE.map((c) => (

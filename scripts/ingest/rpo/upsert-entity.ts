@@ -120,6 +120,16 @@ export async function upsertBusinessEntity(
     krajKod = fallbackMuni.regionKod
   }
 
+  const datumZaniku = detail.termination ? new Date(detail.termination) : null
+
+  // Zaniknuté subjekty sa v business_entities nedržia - appka ich nikde
+  // nezobrazuje a tvorili 54 % tabuľky (viď prune-defunct-entities.ts).
+  // Namiesto riadku sa započítajú do agregátov.
+  if (datumZaniku) {
+    await archivujZaniknuty(prisma, BigInt(detail.id), datumZaniku)
+    return
+  }
+
   await prisma.businessEntity.upsert({
     where: { id: BigInt(detail.id) },
     create: {
@@ -163,8 +173,71 @@ export async function upsertBusinessEntity(
       // filter, so a cleared termination date on the source must
       // actually clear it locally rather than leaving the entity
       // stuck as inactive (or vice versa).
-      datumZaniku: detail.termination ? new Date(detail.termination) : null,
+      datumZaniku: null,
       lastSyncedAt: new Date(),
     },
   })
+}
+
+// Presunie subjekt z tabuľky do agregátov: riadok zmaže a jeho zánik
+// pripočíta do zaniknute_agg, prezitie_agg a vznik_agg.
+//
+// Počíta sa VÝHRADNE vtedy, keď DELETE riadok naozaj našiel. Vďaka tomu je
+// operácia idempotentná: RPO posiela ten istý subjekt v dennej dávke pri
+// každej zmene a run-daily.ts vie tú istú dávku aplikovať znova, ale druhý
+// beh už žiadny riadok nenájde a nič nepripočíta.
+//
+// Dôsledok, ktorý treba poznať: subjekt, ktorý sa u nás objaví prvýkrát už
+// ako zaniknutý (nikdy sme ho nemali ako živý), sa do agregátov nedostane.
+// Radšej mierne podhodnotiť budúce zániky než pri každom opakovanom behu
+// dávky nafukovať štatistiku duplicitami.
+async function archivujZaniknuty(prisma: PrismaClient, id: bigint, datumZaniku: Date) {
+  const zmazane = await prisma.$queryRaw<
+    { okres_kod: string | null; nace_kod4: string | null; pravna_forma_kod: string | null; datum_vzniku: Date | null }[]
+  >`
+    DELETE FROM business_entities WHERE id = ${id}
+    RETURNING okres_kod, nace_kod4, pravna_forma_kod, datum_vzniku
+  `
+
+  const riadok = zmazane[0]
+  if (!riadok) return
+
+  const rokZaniku = datumZaniku.getUTCFullYear()
+  const rokVzniku = riadok.datum_vzniku ? new Date(riadok.datum_vzniku).getUTCFullYear() : null
+
+  // zaniknute_agg nemá unikátny kľúč (kombinácia obsahuje NULLy, na ktorých
+  // by ON CONFLICT nefungoval), takže najprv skús pripočítať a až keď sa
+  // nenašiel riadok, vlož nový.
+  const aktualizovane = await prisma.$executeRaw`
+    UPDATE zaniknute_agg SET pocet = pocet + 1
+    WHERE okres_kod IS NOT DISTINCT FROM ${riadok.okres_kod}
+      AND nace_kod4 IS NOT DISTINCT FROM ${riadok.nace_kod4}
+      AND pravna_forma_kod IS NOT DISTINCT FROM ${riadok.pravna_forma_kod}
+      AND rok_zaniku = ${rokZaniku}
+  `
+  if (aktualizovane === 0) {
+    await prisma.$executeRaw`
+      INSERT INTO zaniknute_agg (okres_kod, nace_kod4, pravna_forma_kod, rok_zaniku, pocet)
+      VALUES (${riadok.okres_kod}, ${riadok.nace_kod4}, ${riadok.pravna_forma_kod}, ${rokZaniku}, 1)
+    `
+  }
+
+  if (rokVzniku === null) return
+
+  await prisma.$executeRaw`
+    INSERT INTO prezitie_agg (rok_vzniku, rok_zaniku, pocet)
+    VALUES (${rokVzniku}, ${rokZaniku}, 1)
+    ON CONFLICT (rok_vzniku, rok_zaniku) DO UPDATE SET pocet = prezitie_agg.pocet + 1
+  `
+
+  const vznikAktualizovany = await prisma.$executeRaw`
+    UPDATE vznik_agg SET pocet = pocet + 1
+    WHERE okres_kod IS NOT DISTINCT FROM ${riadok.okres_kod} AND rok_vzniku = ${rokVzniku}
+  `
+  if (vznikAktualizovany === 0) {
+    await prisma.$executeRaw`
+      INSERT INTO vznik_agg (okres_kod, rok_vzniku, pocet)
+      VALUES (${riadok.okres_kod}, ${rokVzniku}, 1)
+    `
+  }
 }

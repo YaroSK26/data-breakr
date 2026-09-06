@@ -65,6 +65,12 @@ export function AppHeader() {
             <Link href="/#statistiky" className="nav-link">
               Štatistiky
             </Link>
+            <Link href="/zaniknute-firmy" className="nav-link">
+              Zaniknuté firmy
+            </Link>
+            <Link href="/statistiky-okresov" className="nav-link">
+              Štatistiky okresov
+            </Link>
           </nav>
         </div>
       </header>

@@ -22,9 +22,11 @@ interface YearRow {
 }
 
 export async function recomputeStats(prisma: PrismaClient) {
-  const [totalActive, totalTerminated, allDistrictCounts, byCategory, byYearRaw] = await Promise.all([
+  const [totalActive, terminatedAgg, allDistrictCounts, byCategory, byYearRaw] = await Promise.all([
     prisma.businessEntity.count({ where: { datumZaniku: null } }),
-    prisma.businessEntity.count({ where: { datumZaniku: { not: null } } }),
+    // Zaniknuté subjekty už v business_entities nie sú (viď
+    // prune-defunct-entities.ts), ich počet drží agregát.
+    prisma.zaniknuteAgg.aggregate({ _sum: { pocet: true } }),
     prisma.$queryRaw<DistrictCountRow[]>`
       SELECT be."okres_kod" AS "okresKod", d.nazov_sk AS "nazovSk", COUNT(*) AS pocet
       FROM business_entities be
@@ -51,15 +53,26 @@ export async function recomputeStats(prisma: PrismaClient) {
     // source records carry a datum_vzniku dated into next year (bad/typo
     // data from RPO, not real future registrations), which would otherwise
     // show up as a stray bar past "today" on the chart.
+    // Dva zdroje, lebo tabuľka drží už len živé subjekty: vzniky
+    // zaniknutých firiem sú vo vznik_agg. Bez tejto druhej polovice by
+    // graf tvrdil, že v roku 2015 vzniklo o polovicu menej firiem, než
+    // naozaj vzniklo - videl by len tie, čo dodnes prežili.
     prisma.$queryRaw<YearRow[]>`
-      SELECT EXTRACT(YEAR FROM "datum_vzniku")::int AS rok, COUNT(*) AS pocet
-      FROM business_entities
-      WHERE "datum_vzniku" IS NOT NULL
-        AND EXTRACT(YEAR FROM "datum_vzniku") BETWEEN 1995 AND EXTRACT(YEAR FROM CURRENT_DATE)
+      SELECT rok, SUM(pocet)::bigint AS pocet FROM (
+        SELECT EXTRACT(YEAR FROM "datum_vzniku")::int AS rok, COUNT(*)::bigint AS pocet
+        FROM business_entities
+        WHERE "datum_vzniku" IS NOT NULL
+        GROUP BY 1
+        UNION ALL
+        SELECT rok_vzniku AS rok, SUM(pocet)::bigint FROM vznik_agg GROUP BY 1
+      ) spolu
+      WHERE rok BETWEEN 1995 AND EXTRACT(YEAR FROM CURRENT_DATE)
       GROUP BY rok
       ORDER BY rok ASC
     `,
   ])
+
+  const totalTerminated = terminatedAgg._sum.pocet ?? 0
 
   // Bratislava (5 mestských okresov) and Košice (4) are administratively
   // split - a raw per-district ranking makes them look smaller than

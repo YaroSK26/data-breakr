@@ -2,59 +2,46 @@
 import { describe, it, expect, vi } from 'vitest'
 import { recomputeDensity } from './recompute-density'
 
+// recomputeDensity prešla z JS cyklu upsertov na jediný
+// INSERT ... SELECT ... ON CONFLICT (rýchlosť - cyklus robil desaťtisíce
+// round tripov cez pooler). Testy preto už nemôžu overovať výpočet v JS,
+// ale vedia overiť to, čo v kóde zostalo: že ide o jeden príkaz, že vracia
+// počet dotknutých riadkov a že SQL drží invarianty, na ktorých závisí
+// idempotencia opakovaného behu.
+function fakePrisma(rowsAffected = 0) {
+  const executeRaw = vi.fn().mockResolvedValue(rowsAffected)
+  return { $executeRaw: executeRaw, _sql: () => executeRaw.mock.calls[0][0].join('?') }
+}
+
 describe('recomputeDensity', () => {
-  it('computes count per district and per-1000-population ratio when population is known', async () => {
-    const prisma = {
-      $queryRaw: vi.fn().mockResolvedValue([
-        { okresKod: 'SK0315', naceKod4: '5611', pocet: 12n, population: 6000 },
-        { okresKod: 'SK0101', naceKod4: '5611', pocet: 40n, population: null },
-      ]),
-      businessDensityAgg: { upsert: vi.fn() },
-    }
+  it('spustí jediný príkaz a vráti počet dotknutých riadkov', async () => {
+    const prisma = fakePrisma(2)
 
     const result = await recomputeDensity(prisma as never)
 
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1)
     expect(result.areasComputed).toBe(2)
-    const withPop = prisma.businessDensityAgg.upsert.mock.calls.find(
-      (c) => c[0].where.areaKod_granularity_naceKod4_snapshotDate.areaKod === 'SK0315'
-    )!
-    expect(withPop[0].create.pocetPrevadzok).toBe(12)
-    expect(withPop[0].create.pocetNa1000Obyvatelov).toBe(2)
-
-    const withoutPop = prisma.businessDensityAgg.upsert.mock.calls.find(
-      (c) => c[0].where.areaKod_granularity_naceKod4_snapshotDate.areaKod === 'SK0101'
-    )!
-    expect(withoutPop[0].create.pocetNa1000Obyvatelov).toBeNull()
   })
 
-  it('normalizes naceKod4 identically in where and create/update so re-runs upsert, not duplicate, a null-NACE group', async () => {
-    const prisma = {
-      $queryRaw: vi.fn().mockResolvedValue([
-        { okresKod: 'SK0315', naceKod4: null, pocet: 5n, population: null },
-      ]),
-      businessDensityAgg: { upsert: vi.fn() },
-    }
+  it('normalizuje prázdny NACE rovnako v SELECT aj v GROUP BY, aby sa re-run neduplikoval', async () => {
+    const prisma = fakePrisma()
 
     await recomputeDensity(prisma as never)
 
-    const [call] = prisma.businessDensityAgg.upsert.mock.calls
-    const whereNaceKod4 = call[0].where.areaKod_granularity_naceKod4_snapshotDate.naceKod4
-    expect(whereNaceKod4).toBe('')
-    expect(call[0].create.naceKod4).toBe(whereNaceKod4)
-    expect(call[0].update).not.toHaveProperty('naceKod4')
+    const sql = prisma._sql()
+    // Kľúč unikátneho indexu nepripúšťa NULL, preto COALESCE na '' - a musí
+    // byť rovnaký v oboch výskytoch, inak by sa skupina bez NACE pri každom
+    // behu vložila znova namiesto aktualizácie.
+    expect(sql).toContain(`COALESCE(be."nace_kod4", '')`)
+    expect(sql).toContain('ON CONFLICT (area_kod, granularity, nace_kod4, snapshot_date)')
+    expect(sql).toContain('DO UPDATE SET')
   })
 
-  it('handles a BigInt population sum from a real Postgres SUM() without throwing', async () => {
-    const prisma = {
-      $queryRaw: vi.fn().mockResolvedValue([
-        { okresKod: 'SK0315', naceKod4: '5611', pocet: 3n, population: 500n },
-      ]),
-      businessDensityAgg: { upsert: vi.fn() },
-    }
+  it('počíta len živé subjekty', async () => {
+    const prisma = fakePrisma()
 
     await recomputeDensity(prisma as never)
 
-    const [call] = prisma.businessDensityAgg.upsert.mock.calls
-    expect(call[0].create.pocetNa1000Obyvatelov).toBe(6)
+    expect(prisma._sql()).toContain(`be."datum_zaniku" IS NULL`)
   })
 })

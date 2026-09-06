@@ -1,0 +1,26 @@
+# .github/workflows/ingest-susr.yml
+#
+# Okresné ukazovatele zo ŠÚ SR DATAcube. Sú ročné a úrad ich reviduje
+# priebežne, takže mesačné sťahovanie je viac než dosť - ide o ~72 tis.
+# riadkov a tri desiatky malých HTTP volaní.
+name: Ingest ŠÚ SR DATAcube
+
+on:
+  schedule:
+    - cron: '0 4 1 * *'
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run ingest:susr
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}

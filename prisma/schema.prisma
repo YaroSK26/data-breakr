@@ -235,6 +235,70 @@ model BusinessEntity {
   @@map("business_entities")
 }
 
+// Zaniknuté subjekty sa v business_entities nedržia - každý dotaz v appke
+// ich filtruje preč (`datum_zaniku IS NULL`) a tvorili 54 % tabuľky. Namiesto
+// 1,24 M riadkov sa pred zmazaním spočítajú do týchto troch agregátov (~21 tis.
+// riadkov), takže analýzy zostávajú a miesto sa uvoľní. Zdrojové riadky sú
+// kedykoľvek obnoviteľné z RPO bulk snapshotu, nejde o jediný výskyt dát.
+//
+// Roky sa ukladajú tak, ako prišli z RPO, vrátane nezmyselných (184 záznamov
+// má rok zániku pred 1900) - konzument si ich odfiltruje, ako to už robí graf
+// vzniku firiem. Tichá oprava by zamlčala, že zdroj má chybné dátumy.
+model ZaniknuteAgg {
+  id             Int     @id @default(autoincrement())
+  okresKod       String? @map("okres_kod")
+  naceKod4       String? @map("nace_kod4")
+  pravnaFormaKod String? @map("pravna_forma_kod")
+  rokZaniku      Int     @map("rok_zaniku")
+  pocet          Int
+
+  @@index([rokZaniku])
+  @@index([okresKod])
+  @@map("zaniknute_agg")
+}
+
+// Krivky prežitia: koľko subjektov založených v roku X zaniklo v roku Y.
+model PrezitieAgg {
+  rokVzniku Int @map("rok_vzniku")
+  rokZaniku Int @map("rok_zaniku")
+  pocet     Int
+
+  @@id([rokVzniku, rokZaniku])
+  @@map("prezitie_agg")
+}
+
+// Počty vzniknutých subjektov vrátane tých, ktoré medzitým zanikli - bez toho
+// by graf "nové firmy po rokoch" po zmazaní zaniknutých spadol na polovicu.
+model VznikAgg {
+  id        Int     @id @default(autoincrement())
+  okresKod  String? @map("okres_kod")
+  rokVzniku Int     @map("rok_vzniku")
+  pocet     Int
+
+  @@index([rokVzniku])
+  @@map("vznik_agg")
+}
+
+// Okresné ukazovatele zo ŠÚ SR DATAcube (mzdy, zamestnanci, počty podnikov).
+// Územný kód je ten istý ako districts.kod, takže sa spájajú priamo.
+//
+// Odvetvie je tu sekcia SK NACE **Rev. 2** (A, B, C, ... a agregáty ako
+// B_C_D_E), nie Rev. 2.1, v ktorej je zvyšok aplikácie - preto majú tieto
+// čísla vlastnú stránku a nemiešajú sa do filtra kategórií na hlavnej mape.
+model SusrOkresUkazovatel {
+  id          Int     @id @default(autoincrement())
+  okresKod    String  @map("okres_kod")
+  rok         Int
+  ukazovatel  String
+  sekcia      String
+  sekciaNazov String? @map("sekcia_nazov")
+  hodnota     Float
+
+  @@unique([okresKod, rok, ukazovatel, sekcia])
+  @@index([ukazovatel, rok])
+  @@map("susr_okres_ukazovatel")
+}
+
 model BusinessDensityAgg {
   id                        Int      @id @default(autoincrement())
   areaKod                   String   @map("area_kod")
