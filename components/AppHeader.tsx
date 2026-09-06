@@ -2,20 +2,35 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export function AppHeader() {
   // Transparent over the hero at the top of the page, solid brand blue
   // once scrolled - a transparent sticky header stays legible over the
   // hero's own dark gradient, but would blend into the white page body
-  // once it's the only thing at the top of the viewport.
-  const [scrolled, setScrolled] = useState(false)
+  // once it's the only thing at the top of the viewport. Only "/" has that
+  // dark hero underneath the header - every other page starts with a
+  // plain white background, so the header must render solid there from
+  // the very top, or its white nav text becomes unreadable on white.
+  const pathname = usePathname()
+  const hasHero = pathname === '/'
+  const [scrolledPastHero, setScrolledPastHero] = useState(false)
+  const scrolled = !hasHero || scrolledPastHero
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40)
+    if (!hasHero) return
+    const onScroll = () => setScrolledPastHero(window.scrollY > 40)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [hasHero])
+
+  // A route change (clicking a nav link) doesn't remount this component -
+  // without this the dropdown stayed open over the next page.
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
 
   return (
     <>
@@ -50,6 +65,7 @@ export function AppHeader() {
             padding: '18px 20px',
             display: 'flex',
             alignItems: 'center',
+            position: 'relative',
           }}
         >
           <Link
@@ -58,12 +74,9 @@ export function AppHeader() {
           >
             Databáza Firiem
           </Link>
-          <nav style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
+          <nav className={`nav-links${menuOpen ? ' open' : ''}`}>
             <Link href="/#mapa" className="nav-link">
               Mapa hustoty
-            </Link>
-            <Link href="/#statistiky" className="nav-link">
-              Štatistiky
             </Link>
             <Link href="/zaniknute-firmy" className="nav-link">
               Zaniknuté firmy
@@ -71,7 +84,19 @@ export function AppHeader() {
             <Link href="/statistiky-okresov" className="nav-link">
               Štatistiky okresov
             </Link>
+            <Link href="/statistiky" className="nav-link">
+              Daňové dlžníctvo
+            </Link>
           </nav>
+          <button
+            type="button"
+            className="nav-toggle"
+            aria-label={menuOpen ? 'Zavrieť menu' : 'Otvoriť menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            {menuOpen ? '✕' : '☰'}
+          </button>
         </div>
       </header>
     </>

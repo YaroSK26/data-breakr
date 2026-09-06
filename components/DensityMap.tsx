@@ -78,6 +78,11 @@ interface DensityMapProps {
   // zodpovedajú pôvodnej mape hustoty.
   popisHodnoty?: string
   popisLegendy?: { absolute: string; perCapita: string; dphShare?: string }
+  // Niektoré zdroje (ŠÚ SR okresné ukazovatele) majú len jednu absolútnu
+  // hodnotu na okres, žiadny zmysluplný "na obyvateľa" náprotivok - tam by
+  // druhý riadok v tooltipe vždy hlásil "chýbajú dáta", čo je zavádzajúce
+  // (dáta nechýbajú, tá metrika tam len neexistuje).
+  skryTooltipPerCapita?: boolean
 }
 
 export function DensityMap({
@@ -87,6 +92,7 @@ export function DensityMap({
   onDistrictClick,
   popisHodnoty = 'Prevádzok',
   popisLegendy = { absolute: 'Počet firiem', perCapita: 'Na 1000 obyvateľov', dphShare: '% platcov DPH' },
+  skryTooltipPerCapita = false,
 }: DensityMapProps) {
   const [hovered, setHovered] = useState<(MunicipalityProps & DistrictDensity) | null>(null)
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null)
@@ -270,14 +276,16 @@ export function DensityMap({
           <div style={{ marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
             {popisHodnoty}: <strong>{hovered.pocetPrevadzok.toLocaleString('sk-SK')}</strong>
           </div>
-          <div style={{ fontVariantNumeric: 'tabular-nums' }}>
-            Na 1000 obyv.:{' '}
-            <strong>
-              {hovered.pocetNa1000Obyvatelov !== null
-                ? hovered.pocetNa1000Obyvatelov.toFixed(1)
-                : 'chýbajú dáta o populácii'}
-            </strong>
-          </div>
+          {!skryTooltipPerCapita && (
+            <div style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {popisLegendy.perCapita}:{' '}
+              <strong>
+                {hovered.pocetNa1000Obyvatelov !== null
+                  ? hovered.pocetNa1000Obyvatelov.toFixed(1)
+                  : 'chýbajú dáta'}
+              </strong>
+            </div>
+          )}
           {hovered.podielPlatcovDph !== undefined && (
             <div style={{ fontVariantNumeric: 'tabular-nums' }}>
               Platcov DPH:{' '}

@@ -37,7 +37,14 @@ export async function GET(req: NextRequest) {
   ])
 
   const dostupneRoky = roky.map((r) => r.rok)
-  const rok = rokParam ? Number(rokParam) : (dostupneRoky[0] ?? 0)
+  // Klient posiela naposledy vybraný rok aj pri prepnutí ukazovateľa - tri
+  // datasety (mzdy/zamestnanci/podniky) nemajú úplne rovnaký rozsah rokov
+  // (podniky siahajú do 2008, mzdy len do 2009), takže požadovaný rok tu
+  // treba overiť proti tomuto konkrétnemu ukazovateľu, nie ho slepo použiť -
+  // inak by neplatný rok tíško vrátil prázdny zoznam okresov namiesto
+  // najnovšieho dostupného roka.
+  const rokRequested = rokParam ? Number(rokParam) : null
+  const rok = rokRequested !== null && dostupneRoky.includes(rokRequested) ? rokRequested : (dostupneRoky[0] ?? 0)
 
   const hodnoty = await prisma.$queryRaw<HodnotaRow[]>`
     SELECT s.okres_kod AS "okresKod", d.nazov_sk AS nazov, s.hodnota
