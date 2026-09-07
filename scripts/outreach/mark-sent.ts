@@ -5,26 +5,27 @@
 // len sa už nezahŕňajú do súhrnu v summary.ts).
 //
 // Použitie: npx tsx scripts/outreach/mark-sent.ts
-import { prisma } from '../../lib/prisma'
+import { supabase } from './supabase-client'
 
-export async function markSent(p: typeof prisma = prisma) {
-  const result = await p.outreachFirm.updateMany({
-    where: { stav: 'ma_info', poslaneVBriefe: null },
-    data: { poslaneVBriefe: new Date() },
-  })
-  return { oznacene: result.count }
+export async function markSent() {
+  const { data, error } = await supabase
+    .from('outreach_firm')
+    .update({ poslane_v_briefe: new Date().toISOString() })
+    .eq('stav', 'ma_info')
+    .is('poslane_v_briefe', null)
+    .select('ico')
+  if (error) throw error
+  return { oznacene: data?.length ?? 0 }
 }
 
 async function main() {
-  const result = await markSent(prisma)
+  const result = await markSent()
   console.log(`Označených ${result.oznacene} firiem ako odoslané v briefe.`)
 }
 
 if (require.main === module) {
-  main()
-    .catch((err) => {
-      console.error(err)
-      process.exit(1)
-    })
-    .finally(() => prisma.$disconnect())
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
 }

@@ -11,63 +11,61 @@
 // vlastný stav (ma_info / bez_info) naprieč týždňami, tento krok len dopĺňa
 // nové.
 //
+// PostgREST nevie robiť anti-join cez dve tabuľky v jednom volaní - existujúce
+// ICO vo fronte sa preto načítajú a filtrujú v JS namiesto v SQL. Fronta
+// rastie pomaly (rádovo desiatky za týždeň), takže to ostáva malé aj o rok.
+//
 // Použitie: npx tsx scripts/outreach/sync-new.ts
-import { prisma } from '../../lib/prisma'
+import { supabase } from './supabase-client'
 
 const KOSICKY_KRAJ = 'SK042'
 const DNI_SPATNE = 9
 
-interface NovaFirmaRow {
-  ico: string
-  nazov: string | null
-  okresKod: string | null
-  krajKod: string | null
-  datumVzniku: Date | null
-}
+export async function syncNew() {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - DNI_SPATNE)
 
-export async function syncNew(p: typeof prisma = prisma) {
-  // Anti-join priamo v SQL namiesto Prisma relácie - outreach_firm.ico sa k
-  // business_entities neviaže cez FK (fronta má prežiť aj keby sa
-  // business_entities riadok neskôr zmenil/zmazal), takže to nie je
-  // relácia, len zhoda stĺpca.
-  const noveFirmy = await p.$queryRaw<NovaFirmaRow[]>`
-    SELECT be."ico", be."nazov", be."okres_kod" AS "okresKod",
-           be."kraj_kod" AS "krajKod", be."datum_vzniku" AS "datumVzniku"
-    FROM business_entities be
-    LEFT JOIN outreach_firm o ON o.ico = be."ico"
-    WHERE be."kraj_kod" = ${KOSICKY_KRAJ}
-      AND be."datum_zaniku" IS NULL
-      AND be."ico" IS NOT NULL
-      AND be."datum_vzniku" >= CURRENT_DATE - (${DNI_SPATNE} || ' days')::interval
-      AND o.ico IS NULL
-  `
+  const [{ data: kandidati, error: e1 }, { data: existujuce, error: e2 }] = await Promise.all([
+    supabase
+      .from('business_entities')
+      .select('ico, nazov, okres_kod, kraj_kod, datum_vzniku')
+      .eq('kraj_kod', KOSICKY_KRAJ)
+      .is('datum_zaniku', null)
+      .not('ico', 'is', null)
+      .gte('datum_vzniku', cutoff.toISOString()),
+    supabase.from('outreach_firm').select('ico'),
+  ])
 
-  if (noveFirmy.length === 0) return { pridane: 0 }
+  if (e1) throw e1
+  if (e2) throw e2
 
-  await p.outreachFirm.createMany({
-    data: noveFirmy.map((f) => ({
+  const uzVoFronte = new Set((existujuce ?? []).map((r) => r.ico))
+  const nove = (kandidati ?? []).filter((f) => !uzVoFronte.has(f.ico))
+
+  if (nove.length === 0) return { pridane: 0 }
+
+  const { error: e3 } = await supabase.from('outreach_firm').insert(
+    nove.map((f) => ({
       ico: f.ico,
       nazov: f.nazov,
-      okresKod: f.okresKod,
-      krajKod: f.krajKod,
-      datumVzniku: f.datumVzniku,
+      okres_kod: f.okres_kod,
+      kraj_kod: f.kraj_kod,
+      datum_vzniku: f.datum_vzniku,
     })),
-    skipDuplicates: true,
-  })
+  )
+  if (e3) throw e3
 
-  return { pridane: noveFirmy.length }
+  return { pridane: nove.length }
 }
 
 async function main() {
-  const result = await syncNew(prisma)
+  const result = await syncNew()
   console.log(`Pridaných ${result.pridane} nových firiem do outreach frontu.`)
 }
 
 if (require.main === module) {
-  main()
-    .catch((err) => {
-      console.error(err)
-      process.exit(1)
-    })
-    .finally(() => prisma.$disconnect())
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
 }

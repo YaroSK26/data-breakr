@@ -4,32 +4,32 @@
 // bez_info z predošlých týždňov) ako JSON - vstup pre agenta, ktorý ich
 // jednu po druhej preverí a zapíše výsledok cez update.ts.
 //
+// Strop na beh - viac než pár desiatok firiem naraz by websearch nezvládol
+// v jednom behu. Zvyšok ostáva vo fronte a dotiahne sa v ďalších týždňoch.
+//
 // Použitie: npx tsx scripts/outreach/pending.ts
-import { prisma } from '../../lib/prisma'
+import { supabase } from './supabase-client'
 
-// Strop na beh - 207 firiem naraz (prvý týždeň po nasadení) by websearch
-// nezvládol v jednom behu. Zvyšok ostáva vo fronte a dotiahne sa
-// v ďalších týždňoch, nič sa nestráca.
 const MAX_NA_BEH = 25
 
-export async function pending(p: typeof prisma = prisma) {
-  return p.outreachFirm.findMany({
-    where: { stav: { in: ['nove', 'bez_info'] } },
-    orderBy: { datumVzniku: 'desc' },
-    take: MAX_NA_BEH,
-  })
+export async function pending() {
+  const { data, error } = await supabase
+    .from('outreach_firm')
+    .select('*')
+    .in('stav', ['nove', 'bez_info'])
+    .order('datum_vzniku', { ascending: false })
+    .limit(MAX_NA_BEH)
+  if (error) throw error
+  return data ?? []
 }
 
 async function main() {
-  const rows = await pending(prisma)
-  console.log(JSON.stringify(rows, null, 2))
+  console.log(JSON.stringify(await pending(), null, 2))
 }
 
 if (require.main === module) {
-  main()
-    .catch((err) => {
-      console.error(err)
-      process.exit(1)
-    })
-    .finally(() => prisma.$disconnect())
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
 }
