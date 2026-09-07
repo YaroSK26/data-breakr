@@ -83,14 +83,14 @@ const FARBY_KOHORT = ["#1e40af", "#3b82f6", "#93c5fd"];
 // desktop - na mobile (~360px) zožrala väčšinu grafu a stĺpce sa
 // vtesnali do posledných pár desiatok pixelov vpravo. Na úzkom viewporte
 // treba popisky kratšie aj užšie, aby ostal priestor na samotné stĺpce.
-function useIsNarrow(): boolean {
+function useIsNarrow(breakpoint = 480): boolean {
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
-    const update = () => setNarrow(window.innerWidth < 480);
+    const update = () => setNarrow(window.innerWidth < breakpoint);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, []);
+  }, [breakpoint]);
   return narrow;
 }
 
@@ -154,6 +154,11 @@ export function ZaniknuteFirmySection() {
   const [metric, setMetric] = useState<Metric>("absolute");
   const [chyba, setChyba] = useState(false);
   const narrow = useIsNarrow();
+  // 32 rokov (1995-teraz) na osi X potrebuje oveľa viac miesta než ostatné
+  // popisky v tejto sekcii, ktoré useIsNarrow() rieši pri 480px - preskočiť
+  // časť rokov treba oveľa skôr, inak sa na bežných telefónoch (~500-700px)
+  // stále nabalia na seba.
+  const rokyNarrow = useIsNarrow(700);
 
   // Porovnanie s mapou hustoty firiem - rovnaká DensityMap inštancia, len s
   // inými dátami. Rovnaký vzor ako opačné tlačidlo na hlavnej mape (viď
@@ -387,7 +392,14 @@ export function ZaniknuteFirmySection() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.poRokoch ?? []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="rok" fontSize={11} interval={0} />
+                <XAxis
+                  dataKey="rok"
+                  fontSize={rokyNarrow ? 9 : 11}
+                  interval={rokyNarrow ? 3 : 0}
+                  angle={rokyNarrow ? -60 : 0}
+                  textAnchor={rokyNarrow ? "end" : "middle"}
+                  height={rokyNarrow ? 40 : 30}
+                />
                 <YAxis
                   fontSize={11}
                   tickFormatter={(v) => (v as number).toLocaleString("sk-SK")}
