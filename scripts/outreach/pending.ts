@@ -7,10 +7,16 @@
 // Použitie: npx tsx scripts/outreach/pending.ts
 import { prisma } from '../../lib/prisma'
 
+// Strop na beh - 207 firiem naraz (prvý týždeň po nasadení) by websearch
+// nezvládol v jednom behu. Zvyšok ostáva vo fronte a dotiahne sa
+// v ďalších týždňoch, nič sa nestráca.
+const MAX_NA_BEH = 25
+
 export async function pending(p: typeof prisma = prisma) {
   return p.outreachFirm.findMany({
     where: { stav: { in: ['nove', 'bez_info'] } },
     orderBy: { datumVzniku: 'desc' },
+    take: MAX_NA_BEH,
   })
 }
 
