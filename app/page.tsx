@@ -102,6 +102,33 @@ function MapaHustotyFiriem() {
     DistrictDensity
   > | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Porovnanie s mapou zánikov - znovu použije tú istú DensityMap inštanciu,
+  // len jej podsunie iné dáta, namiesto toho aby vznikala druhá, takmer
+  // identická mapa. Zánikové dáta sa fetchujú lenivo, až pri prvom kliku.
+  const [porovnat, setPorovnat] = useState(false);
+  const [zanikByDistrict, setZanikByDistrict] = useState<Record<
+    string,
+    DistrictDensity
+  > | null>(null);
+
+  useEffect(() => {
+    if (!porovnat || zanikByDistrict) return;
+    fetch("/api/zaniknute")
+      .then((r) => r.json())
+      .then((d: { poOkresoch: { okresKod: string; zaniklo: number; aktivnych: number }[] }) => {
+        const out: Record<string, DistrictDensity> = {};
+        for (const o of d.poOkresoch) {
+          const spolu = o.zaniklo + o.aktivnych;
+          out[o.okresKod] = {
+            pocetPrevadzok: o.zaniklo,
+            pocetNa1000Obyvatelov: spolu > 0 ? (o.zaniklo / spolu) * 100 : null,
+          };
+        }
+        setZanikByDistrict(out);
+      })
+      .catch(() => setZanikByDistrict(null));
+  }, [porovnat, zanikByDistrict]);
   const [selectedDistrict, setSelectedDistrict] = useState<{
     kod: string;
     nazov: string;
@@ -172,6 +199,14 @@ function MapaHustotyFiriem() {
           </p>
         </header>
 
+
+        {porovnat ? (
+          <p style={{ color: "#64748b", margin: "0 0 16px", fontSize: 13 }}>
+            % zaniknutých = zaniklo / (zaniklo + dnes aktívnych) v okrese, z
+            celého registra - filtre kategórie/kraja/formy tu neplatia,
+            zaniknuté subjekty sa evidujú len ako súhrny bez týchto detailov.
+          </p>
+        ) : (
         <section
           style={{
             display: "flex",
@@ -327,6 +362,7 @@ function MapaHustotyFiriem() {
             </div>
           </div>
         </section>
+        )}
 
         <div
           style={{
@@ -338,11 +374,19 @@ function MapaHustotyFiriem() {
           }}
         >
           <DensityMap
-            densityByDistrict={densityByDistrict}
-            metric={metricParam}
-            loading={loading}
-            onDistrictClick={(kod, nazov) =>
-              setSelectedDistrict({ kod, nazov })
+            densityByDistrict={porovnat ? zanikByDistrict : densityByDistrict}
+            metric={porovnat ? "perCapita" : metricParam}
+            loading={porovnat ? !zanikByDistrict : loading}
+            popisHodnoty={porovnat ? "Zaniklo" : undefined}
+            popisLegendy={
+              porovnat
+                ? { absolute: "Počet zaniknutých", perCapita: "% zaniknutých" }
+                : undefined
+            }
+            onDistrictClick={
+              porovnat
+                ? undefined
+                : (kod, nazov) => setSelectedDistrict({ kod, nazov })
             }
           />
         </div>

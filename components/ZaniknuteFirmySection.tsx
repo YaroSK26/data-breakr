@@ -155,6 +155,15 @@ export function ZaniknuteFirmySection() {
   const [chyba, setChyba] = useState(false);
   const narrow = useIsNarrow();
 
+  // Porovnanie s mapou hustoty firiem - rovnaká DensityMap inštancia, len s
+  // inými dátami. Rovnaký vzor ako opačné tlačidlo na hlavnej mape (viď
+  // app/page.tsx), aby sa neduplikovala takmer identická mapa.
+  const [porovnat, setPorovnat] = useState(false);
+  const [hustotaByDistrict, setHustotaByDistrict] = useState<Record<
+    string,
+    DistrictDensity
+  > | null>(null);
+
   useEffect(() => {
     fetch("/api/zaniknute")
       .then((r) => r.json())
@@ -166,6 +175,14 @@ export function ZaniknuteFirmySection() {
       .then((d) => setSources(d.sources))
       .catch(() => setSources([]));
   }, []);
+
+  useEffect(() => {
+    if (!porovnat || hustotaByDistrict) return;
+    fetch("/api/density")
+      .then((r) => r.json())
+      .then((d) => setHustotaByDistrict(d.byDistrict))
+      .catch(() => setHustotaByDistrict(null));
+  }, [porovnat, hustotaByDistrict]);
 
   // Mapa berie tvar { pocetPrevadzok, pocetNa1000Obyvatelov } - tu je v ňom
   // počet zánikov a druhá metrika je podiel zaniknutých na všetkých, čo v
@@ -273,7 +290,7 @@ export function ZaniknuteFirmySection() {
       <section style={{ ...CARD, padding: 8 }}>
         <div style={{ padding: "10px 12px 0" }}>
           <h3 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>
-            Kde firmy zanikajú
+            {porovnat ? "Kde firmy podnikajú" : "Kde firmy zanikajú"}
           </h3>
           <div
             style={{
@@ -281,47 +298,66 @@ export function ZaniknuteFirmySection() {
               gap: 4,
               margin: "10px 0",
               flexWrap: "wrap",
+              justifyContent: "space-between",
             }}
           >
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              <button
+                onClick={() => setMetric("absolute")}
+                style={{
+                  padding: "7px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: metric === "absolute" ? "#2563eb" : "white",
+                  color: metric === "absolute" ? "white" : "#1e293b",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                {porovnat ? "Počet firiem" : "Počet zaniknutých"}
+              </button>
+              <button
+                onClick={() => setMetric("perCapita")}
+                style={{
+                  padding: "7px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: metric === "perCapita" ? "#2563eb" : "white",
+                  color: metric === "perCapita" ? "white" : "#1e293b",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                {porovnat ? "Na 1000 obyvateľov" : "Podiel zaniknutých (%)"}
+              </button>
+            </div>
             <button
-              onClick={() => setMetric("absolute")}
+              onClick={() => setPorovnat((v) => !v)}
               style={{
                 padding: "7px 12px",
                 borderRadius: 6,
                 border: "1px solid #cbd5e1",
-                background: metric === "absolute" ? "#2563eb" : "white",
-                color: metric === "absolute" ? "white" : "#1e293b",
+                background: porovnat ? "#2563eb" : "white",
+                color: porovnat ? "white" : "#1e293b",
                 cursor: "pointer",
                 fontSize: 13,
+                fontWeight: 600,
               }}
             >
-              Počet zaniknutých
-            </button>
-            <button
-              onClick={() => setMetric("perCapita")}
-              style={{
-                padding: "7px 12px",
-                borderRadius: 6,
-                border: "1px solid #cbd5e1",
-                background: metric === "perCapita" ? "#2563eb" : "white",
-                color: metric === "perCapita" ? "white" : "#1e293b",
-                cursor: "pointer",
-                fontSize: 13,
-              }}
-            >
-              Podiel zaniknutých (%)
+              {porovnat ? "← Späť na zániky" : "Porovnať s hustotou firiem →"}
             </button>
           </div>
         </div>
         <DensityMap
-          densityByDistrict={mapaDat}
+          densityByDistrict={porovnat ? hustotaByDistrict : mapaDat}
           metric={metric}
-          loading={!data}
-          popisHodnoty="Zaniklo"
-          popisLegendy={{
-            absolute: "Počet zaniknutých",
-            perCapita: "% zaniknutých",
-          }}
+          loading={porovnat ? !hustotaByDistrict : !data}
+          popisHodnoty={porovnat ? "Prevádzok" : "Zaniklo"}
+          popisLegendy={
+            porovnat
+              ? { absolute: "Počet firiem", perCapita: "Na 1000 obyvateľov" }
+              : { absolute: "Počet zaniknutých", perCapita: "% zaniknutých" }
+          }
         />
         <p
           style={{
