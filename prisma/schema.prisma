@@ -326,6 +326,27 @@ model FsDanovyDlznikOkres {
   @@map("fs_danovy_dlznik_okres")
 }
 
+// Fronta na týždenný "košický outreach" brief (mimo appky - beží ako
+// naplánovaná úloha, viď scripts/outreach/). Firma sa sem pridá raz, keď sa
+// prvýkrát objaví v RPO pre daný kraj, a ostáva v tabuľke kým nedostane
+// "ma_info" (má nejakú online stopu) - dovtedy sa každý týždeň skúša znova.
+model OutreachFirm {
+  ico            String    @id
+  nazov          String?
+  okresKod       String?   @map("okres_kod")
+  krajKod        String?   @map("kraj_kod")
+  datumVzniku    DateTime? @map("datum_vzniku")
+  stav           String    @default("nove")
+  najdenaInfo    String?   @map("najdena_info")
+  pocetKontrol   Int       @default(0) @map("pocet_kontrol")
+  prvyCheck      DateTime  @default(now()) @map("prvy_check")
+  posledneCheck  DateTime? @map("posledne_check")
+  poslaneVBriefe DateTime? @map("poslane_v_briefe")
+
+  @@index([krajKod, stav])
+  @@map("outreach_firm")
+}
+
 model BusinessDensityAgg {
   id                        Int      @id @default(autoincrement())
   areaKod                   String   @map("area_kod")
