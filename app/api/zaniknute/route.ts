@@ -158,8 +158,18 @@ export async function GET() {
 
   const p = pokrytie[0]
 
+  // zaniknute_agg nemá riadok pre roky bez jediného zániku (napr. 2005) -
+  // GROUP BY ich preto úplne vynechá a Recharts stĺpcový graf potom
+  // preskočí aj samotnú kategóriu na osi X, nie len stĺpec.
+  const aktualnyRokPreVyplnenie = new Date().getFullYear()
+  const poRokochMap = new Map(poRokoch.map((r) => [r.rok, Number(r.pocet)]))
+  const poRokochVyplnene: { rok: number; pocet: number }[] = []
+  for (let rok = PRVY_ROK; rok <= aktualnyRokPreVyplnenie; rok++) {
+    poRokochVyplnene.push({ rok, pocet: poRokochMap.get(rok) ?? 0 })
+  }
+
   return NextResponse.json({
-    poRokoch: poRokoch.map((r) => ({ rok: r.rok, pocet: Number(r.pocet) })),
+    poRokoch: poRokochVyplnene,
     poOkresoch: poOkresoch.map((o) => ({
       okresKod: o.okresKod,
       nazov: o.nazov,

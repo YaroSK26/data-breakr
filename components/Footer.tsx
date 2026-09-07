@@ -38,7 +38,7 @@ export function Footer() {
           textAlign: isMobile ? "center" : "left",
         }}
       >
-        <span>Databáza Firiem - dáta z verejného registra RPO.</span>
+        <span>Databáza Firiem - dáta z verejných registrov RPO a RÚZ.</span>
         <span>
           Postavil{" "}
           <a

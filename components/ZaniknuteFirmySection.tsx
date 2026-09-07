@@ -254,7 +254,7 @@ export function ZaniknuteFirmySection() {
           lineHeight: 1.55,
         }}
       >
-        <strong>Ako čítať tieto čísla.</strong> Zaniknuté subjekty držíme len
+        <strong>Ako čítať tieto čísla:</strong> Zaniknuté subjekty držíme len
         ako súhrny (počty podľa okresu, odvetvia, právnej formy a roku), nie ako
         jednotlivé firmy - nedá sa tu preto vyhľadať konkrétna zaniknutá firma.
         <br />
@@ -351,7 +351,7 @@ export function ZaniknuteFirmySection() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.poRokoch ?? []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="rok" fontSize={11} />
+                <XAxis dataKey="rok" fontSize={11} interval={0} />
                 <YAxis
                   fontSize={11}
                   tickFormatter={(v) => (v as number).toLocaleString("sk-SK")}
@@ -458,9 +458,14 @@ export function ZaniknuteFirmySection() {
       </section>
 
       <section style={CARD}>
-        <h3 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>
           Okresy s najvyšším podielom zaniknutých
         </h3>
+        <p style={{ color: "#64748b", margin: "0 0 14px", fontSize: 13 }}>
+          Z celkového počtu subjektov v okrese (zaniklo / zaniklo + aktívnych) -
+          na rozdiel od rebríčka odvetví nižšie tu nejde o výber z tých 5 %,
+          ktorým RPO priradilo odvetvie.
+        </p>
         <div style={{ height: 300 }}>
           {loading ? (
             <ChartLoading />
@@ -485,6 +490,7 @@ export function ZaniknuteFirmySection() {
                   type="category"
                   dataKey="nazov"
                   width={narrow ? 68 : 90}
+                  interval={0}
                   tick={
                     <SingleLineTick
                       maxLen={narrow ? 10 : 16}
@@ -529,6 +535,7 @@ export function ZaniknuteFirmySection() {
                   type="category"
                   dataKey="nazov"
                   width={narrow ? 72 : 150}
+                  interval={0}
                   tick={
                     <SingleLineTick
                       maxLen={narrow ? 11 : 24}

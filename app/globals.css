@@ -116,11 +116,11 @@ a {
     top: 100%;
     left: 0;
     right: 0;
-    margin-top: 8px;
+    margin-top: 0px;
     background: #2563eb;
-    padding: 10px;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+    padding: 6px 10px;
+    border-radius: 0px;
+
   }
 
   .nav-links .nav-link {
