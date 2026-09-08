@@ -1,14 +1,14 @@
 // scripts/outreach/sync-new.ts
 //
-// Krok 1 týždenného košického briefu: nájde ČERSTVO ZAREGISTROVANÉ firmy v
+// Krok 1 košického briefu (beží raz za 3 dni): nájde ČERSTVO ZAREGISTROVANÉ firmy v
 // Košickom kraji (SK042) - vznik v posledných DNI_SPATNE dňoch - ktoré ešte
 // nie sú vo fronte outreach_firm, a pridá ich so stavom 'nove'.
 //
-// DNI_SPATNE=9 pri týždennej kadencii (7 dní + 2 dni rezerva, aby sa nič
+// DNI_SPATNE=5 pri 3-dňovej kadencii (3 dni + 2 dni rezerva, aby sa nič
 // nestratilo pri posune behu) - úmyselne NEberie všetky historicky aktívne
 // firmy v kraji naraz (bolo by ich ~100 tisíc, na web-search klasifikáciu
 // nepoužiteľné množstvo). Existujúce riadky sa nemenia - fronta si drží
-// vlastný stav (ma_info / bez_info) naprieč týždňami, tento krok len dopĺňa
+// vlastný stav (ma_info / bez_info) naprieč behmi, tento krok len dopĺňa
 // nové.
 //
 // PostgREST nevie robiť anti-join cez dve tabuľky v jednom volaní - existujúce
@@ -19,7 +19,7 @@
 import { supabase } from './supabase-client'
 
 const KOSICKY_KRAJ = 'SK042'
-const DNI_SPATNE = 9
+const DNI_SPATNE = 5
 
 export async function syncNew() {
   const cutoff = new Date()
