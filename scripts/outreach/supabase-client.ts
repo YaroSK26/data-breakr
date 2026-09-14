@@ -9,6 +9,15 @@
 // here since this only ever runs server-side with a secret key, never
 // exposed to a browser.
 import { createClient } from '@supabase/supabase-js'
+import { config as loadEnv } from 'dotenv'
+
+// Rovnaký dôvod ako v lib/prisma.ts: tieto skripty sa spúšťajú cez holý
+// `tsx`, ktorý žiadne .env sám nenačíta. V cloud routine sa premenné
+// podávajú priamo pred príkazom, takže tam sa .env.local ani nehľadá - preto
+// je načítanie podmienené a nie bezpodmienečné.
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  loadEnv({ path: '.env.local' })
+}
 
 const url = process.env.SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

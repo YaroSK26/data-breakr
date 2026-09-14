@@ -1,15 +1,25 @@
 // app/api/cron/rpo-daily/route.ts
 //
-// Triggered once a day by Vercel Cron (see vercel.json). Applies RPO's
-// daily incremental batches since our last sync, across the whole of
-// Slovakia, then recomputes density + stats so the live site reflects the
-// new entities - the same logic as `npm run ingest:rpo-daily`, just
-// reachable over HTTP for the scheduler to call.
+// Applies RPO's daily incremental batches since our last sync, across the
+// whole of Slovakia, then recomputes density + stats so the live site
+// reflects the new entities - the same logic as `npm run ingest:rpo-daily`,
+// just reachable over HTTP.
 //
-// Vercel signs its own cron requests with `Authorization: Bearer
-// $CRON_SECRET` automatically once CRON_SECRET is set as an env var - this
-// route rejects any request that doesn't present that same secret, so it
-// can't be triggered by a random public POST.
+// POZOR: toto UŽ NIE JE denný spúšťač. Vercel Cron ho volal každý deň o
+// 03:17, ale `maxDuration` je 60 s (na Hobby pláne strop, zdvihnúť sa nedá)
+// a jedna denná dávka má 2-3 tisíc subjektov plus prepočet hustoty cez 26
+// tisíc území - do minúty sa to nezmestilo ani raz. Funkcia spadla na
+// timeout vždy, takže sa `lastSyncedAt` nikdy neposunul a rozsah ďalšieho
+// behu sa každý deň zväčšoval. Denný beh teraz robí GitHub Actions
+// (.github/workflows/ingest-rpo-daily.yml), kde časový strop nie je.
+//
+// Endpoint ostáva na ručné dobehnutie malého sklzu (jedna-dve dávky), keď
+// sa nechce čakať na workflow - na väčší rozsah použi workflow alebo
+// `npm run ingest:rpo-daily` lokálne.
+//
+// Volanie sa autentizuje hlavičkou `Authorization: Bearer $CRON_SECRET` -
+// route odmietne každú požiadavku, ktorá ten istý secret nepredloží, takže
+// ju nevie spustiť náhodný verejný request.
 import { NextResponse } from 'next/server'
 import os from 'os'
 import path from 'path'

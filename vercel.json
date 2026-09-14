@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/rpo-daily",
-      "schedule": "17 3 * * *"
-    }
-  ]
-}
+{}

@@ -232,6 +232,12 @@ model BusinessEntity {
   @@index([pravnaFormaKod, datumZaniku])
   @@index([ico])
   @@index([datumVzniku])
+  // "čerstvo vzniknuté firmy v kraji" (scripts/outreach/sync-new.ts). Cez
+  // [krajKod, datumZaniku] to skončilo bitmap scanom nad ~103 tis. riadkami
+  // kraja, z ktorých filter zahodil 101 788 - za studena 8 s, čo je presne
+  // strop statement_timeoutu na Supabase REST, takže beh raz prešiel a raz
+  // spadol na 57014. S datumVzniku v indexe je to rozsahové čítanie.
+  @@index([krajKod, datumVzniku])
   @@map("business_entities")
 }
 
@@ -258,12 +264,25 @@ model ZaniknuteAgg {
 }
 
 // Krivky prežitia: koľko subjektov založených v roku X zaniklo v roku Y.
+// Pozor na kľúč: NIE je tu unikát na (rokVzniku, rokZaniku). Migrácia
+// 20260907070000_prezitie_agg_nace_forma pridala rozpad podľa odvetvia a
+// právnej formy, takže tá istá dvojica rokov môže mať viac riadkov a
+// unikátny je až štvorstĺpcový kľúč. Prírastkový zápis v
+// scripts/ingest/rpo/upsert-entity.ts preto nesmie použiť
+// `ON CONFLICT (rok_vzniku, rok_zaniku)` - Postgres to odmietne chybou
+// 42P10. Čítanie v app/api/zaniknute/route.ts s viacerými riadkami na
+// dvojicu rokov počíta správne, sčítava ich.
 model PrezitieAgg {
-  rokVzniku Int @map("rok_vzniku")
-  rokZaniku Int @map("rok_zaniku")
-  pocet     Int
+  id             Int     @id @default(autoincrement())
+  rokVzniku      Int     @map("rok_vzniku")
+  rokZaniku      Int     @map("rok_zaniku")
+  pocet          Int
+  naceKod4       String? @map("nace_kod4")
+  pravnaFormaKod String? @map("pravna_forma_kod")
 
-  @@id([rokVzniku, rokZaniku])
+  @@unique([rokVzniku, rokZaniku, naceKod4, pravnaFormaKod])
+  @@index([naceKod4])
+  @@index([pravnaFormaKod])
   @@map("prezitie_agg")
 }
 

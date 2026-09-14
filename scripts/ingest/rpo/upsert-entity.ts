@@ -224,11 +224,24 @@ async function archivujZaniknuty(prisma: PrismaClient, id: bigint, datumZaniku: 
 
   if (rokVzniku === null) return
 
-  await prisma.$executeRaw`
-    INSERT INTO prezitie_agg (rok_vzniku, rok_zaniku, pocet)
-    VALUES (${rokVzniku}, ${rokZaniku}, 1)
-    ON CONFLICT (rok_vzniku, rok_zaniku) DO UPDATE SET pocet = prezitie_agg.pocet + 1
+  // Rovnaký dôvod ako pri zaniknute_agg vyššie: ON CONFLICT (rok_vzniku,
+  // rok_zaniku) tu nefunguje, lebo živá tabuľka taký unikátny kľúč nemá -
+  // má PRIMARY KEY (id) a unikát cez štyri stĺpce vrátane nullovateľných
+  // nace_kod4 / pravna_forma_kod. Postgres na nezhodný cieľ vráti 42P10
+  // ("no unique or exclusion constraint matching the ON CONFLICT
+  // specification") a celá archivácia subjektu spadne až PO tom, čo sa
+  // riadok z business_entities už zmazal - čiže sa stratí. Preto sa aj tu
+  // najprv skúša pripočítať a až keď sa nenašiel riadok, vloží nový.
+  const prezitieAktualizovane = await prisma.$executeRaw`
+    UPDATE prezitie_agg SET pocet = pocet + 1
+    WHERE rok_vzniku = ${rokVzniku} AND rok_zaniku = ${rokZaniku}
   `
+  if (prezitieAktualizovane === 0) {
+    await prisma.$executeRaw`
+      INSERT INTO prezitie_agg (rok_vzniku, rok_zaniku, pocet)
+      VALUES (${rokVzniku}, ${rokZaniku}, 1)
+    `
+  }
 
   const vznikAktualizovany = await prisma.$executeRaw`
     UPDATE vznik_agg SET pocet = pocet + 1

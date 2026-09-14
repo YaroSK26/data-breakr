@@ -1,0 +1,36 @@
+# .github/workflows/ingest-rpo-daily.yml
+#
+# Denné prírastkové dávky RPO (nové a zmenené subjekty za celé Slovensko)
+# plus prepočet hustoty a štatistík na hlavnej stránke.
+#
+# Prečo tu a nie na Verceli: to isté predtým spúšťal Vercel Cron cez
+# /api/cron/rpo-daily, lenže serverless funkcia má strop `maxDuration = 60`
+# (na Hobby pláne sa zdvihnúť nedá) a jedna denná dávka má rádovo 2-3 tisíc
+# subjektov - samotný prepočet hustoty beží cez 26 tisíc území. Do minúty sa
+# to nezmestilo ani raz, takže sa dátum posledného syncu nikdy neposunul a
+# každý ďalší beh mal o deň väčší rozsah. GitHub Actions časový strop na
+# jeden krok nemá, takže beh dobehne celý.
+#
+# Čas: 03:40 UTC, teda po dennom RPO exporte a pred behom FS o 05:00.
+name: Ingest RPO (denné dávky)
+
+on:
+  schedule:
+    - cron: '40 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run ingest:rpo-daily
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
