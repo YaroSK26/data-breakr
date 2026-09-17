@@ -3,6 +3,7 @@ import { Urbanist, Sora } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AppHeader } from "@/components/AppHeader";
 import { Footer } from "@/components/Footer";
+import { RychlyPrehlad } from "@/components/RychlyPrehlad";
 import "./globals.css";
 
 const urbanist = Urbanist({
@@ -27,6 +28,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AppHeader />
         <div id="main-content" style={{ flex: 1 }}>{children}</div>
         <Footer />
+        {/* Plávajúce tlačidlo je v layoute, nie na jednotlivých stránkach -
+            zmysel má práve preto, že je dostupné odkiaľkoľvek. */}
+        <RychlyPrehlad />
         <Analytics />
       </body>
     </html>
