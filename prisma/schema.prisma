@@ -340,6 +340,10 @@ model FsDanovyDlznikOkres {
   okresKod      String   @id @map("okres_kod")
   pocetDlznikov Int      @map("pocet_dlznikov")
   sumaDlhu      Float    @map("suma_dlhu")
+  // Dlh najväčšieho jednotlivého dlžníka v okrese (bez mena). Jeden subjekt
+  // vie tvoriť väčšinu súčtu - napr. Poltár, kde je to ~89 % - a rebríček
+  // podľa sumy by bez tejto informácie klamal.
+  najvacsiDlh   Float    @default(0) @map("najvacsi_dlh")
   aktualizovane DateTime
 
   @@map("fs_danovy_dlznik_okres")

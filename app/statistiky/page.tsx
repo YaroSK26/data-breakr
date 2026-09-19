@@ -25,10 +25,15 @@ interface DlznikOkres {
   nazov: string;
   pocetDlznikov: number;
   sumaDlhu: number;
+  najvacsiDlh: number;
   aktivnychFiriem: number;
   pocetPlatcovDph: number;
   obyvatelov: number | null;
 }
+
+// Od akého podielu jedného dlžníka na súčte okresu sa riadok označí -
+// nad polovicu už súčet nevypovedá o okrese, ale o jednej firme.
+const PRAH_JEDEN_DLZNIK = 0.5;
 
 export default function StatistikyPage() {
   const [sources, setSources] = useState<DataSource[]>([]);
@@ -62,11 +67,16 @@ export default function StatistikyPage() {
           dlhNa1000Obyv: o.obyvatelov
             ? (o.sumaDlhu / o.obyvatelov) * 1000
             : null,
+          podielNajvacsieho: o.sumaDlhu > 0 ? o.najvacsiDlh / o.sumaDlhu : 0,
         }))
         .filter((o) => o.dlhNa1000Obyv !== null)
         .sort((a, b) => (b.dlhNa1000Obyv ?? 0) - (a.dlhNa1000Obyv ?? 0))
         .slice(0, 10),
     [okresyNaAnalyzu],
+  );
+
+  const skresleneOkresy = najzadlzenejsie.filter(
+    (o) => o.podielNajvacsieho > PRAH_JEDEN_DLZNIK,
   );
 
   const dphVsDlhBody = useMemo(
@@ -117,6 +127,32 @@ export default function StatistikyPage() {
         <p style={{ color: "#64748b", margin: "0 0 14px", fontSize: 13 }}>
           Dlh daňových dlžníkov (FS SR) na 1000 obyvateľov okresu.
         </p>
+        {skresleneOkresy.length > 0 && (
+          <div
+            role="note"
+            style={{
+              margin: "0 0 14px",
+              padding: "12px 14px",
+              background: "#fffbeb",
+              border: "1px solid #f59e0b",
+              borderLeft: "4px solid #f59e0b",
+              borderRadius: 8,
+              fontSize: 14,
+              color: "#78350f",
+            }}
+          >
+            <strong>Pozor: súčet dlhu niektorých okresov ťahá jeden dlžník.</strong>{" "}
+            {skresleneOkresy
+              .map(
+                (o) =>
+                  `${o.nazov} - ${Math.round(o.podielNajvacsieho * 100)} % dlhu okresu pripadá na jediný subjekt`,
+              )
+              .join("; ")}
+            . Poradie týchto okresov tak vypovedá skôr o jednej firme než o
+            okrese ako celku. Zoznam FS SR navyše obsahuje aj subjekty, ktoré
+            už z registra zanikli, no dlh im ostal evidovaný.
+          </div>
+        )}
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ textAlign: "left", color: "#64748b", fontSize: 12 }}>
@@ -142,7 +178,26 @@ export default function StatistikyPage() {
             )}
             {najzadlzenejsie.map((o) => (
               <tr key={o.okresKod} style={{ borderTop: "1px solid #e2e8f0" }}>
-                <td style={{ padding: "8px" }}>{o.nazov}</td>
+                <td style={{ padding: "8px" }}>
+                  {o.nazov}
+                  {o.podielNajvacsieho > PRAH_JEDEN_DLZNIK && (
+                    <span
+                      title="Viac ako polovica dlhu okresu pripadá na jediný subjekt"
+                      style={{
+                        marginLeft: 8,
+                        padding: "1px 6px",
+                        borderRadius: 4,
+                        background: "#fef3c7",
+                        color: "#92400e",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {Math.round(o.podielNajvacsieho * 100)} % jeden dlžník
+                    </span>
+                  )}
+                </td>
                 <td
                   style={{
                     padding: "8px",

@@ -21,6 +21,7 @@ interface Row {
   nazov: string
   pocetDlznikov: number
   sumaDlhu: number
+  najvacsiDlh: number
   aktivnychFiriem: number
   pocetPlatcovDph: number
   obyvatelov: number | null
@@ -33,6 +34,7 @@ export async function GET() {
       d.nazov_sk AS nazov,
       COALESCE(f.pocet_dlznikov, 0) AS "pocetDlznikov",
       COALESCE(f.suma_dlhu, 0) AS "sumaDlhu",
+      COALESCE(f.najvacsi_dlh, 0) AS "najvacsiDlh",
       COALESCE(a.aktivnych, 0)::int AS "aktivnychFiriem",
       COALESCE(a.platcov_dph, 0)::int AS "pocetPlatcovDph",
       p.obyvatelov

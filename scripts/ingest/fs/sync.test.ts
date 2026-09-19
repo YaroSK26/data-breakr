@@ -153,14 +153,15 @@ describe('syncDlznici', () => {
     }
     const rows = [
       ...dostByRiadkov,
-      { psc: '99999', ciastka: 999 }, // nepozná ho mapa - vynechá sa
+      { psc: '04001', ciastka: 5_000 }, // najväčší dlžník v okrese
+      { psc: '99999', ciastka: 999_999 }, // nepozná ho mapa - vynechá sa, ani do maxima
     ]
     const pscToOkres = new Map([['04001', 'SK0422']])
 
     const vysledok = await syncDlznici(prisma as never, rows, pscToOkres)
 
-    expect(vysledok).toEqual({ dlznikov: 80_001, sOkresom: 80_000, matchPct: 80_000 / 80_001 })
+    expect(vysledok).toEqual({ dlznikov: 80_002, sOkresom: 80_001, matchPct: 80_001 / 80_002 })
     const zapisane = prisma.fsDanovyDlznikOkres.createMany.mock.calls[0][0].data
-    expect(zapisane).toEqual([{ okresKod: 'SK0422', pocetDlznikov: 80_000, sumaDlhu: 800_000, aktualizovane: expect.any(Date) }])
+    expect(zapisane).toEqual([{ okresKod: 'SK0422', pocetDlznikov: 80_001, sumaDlhu: 805_000, najvacsiDlh: 5_000, aktualizovane: expect.any(Date) }])
   })
 })

@@ -124,15 +124,16 @@ export async function syncDlznici(
     throw new Error(`Zoznam daňových dlžníkov má len ${rows.length} riadkov, čakalo sa aspoň ${MIN_DLZNIK_RIADKOV} - nemazať existujúce dáta.`)
   }
 
-  const poOkresoch = new Map<string, { pocet: number; suma: number }>()
+  const poOkresoch = new Map<string, { pocet: number; suma: number; najvacsi: number }>()
   let sOkresom = 0
   for (const r of rows) {
     const okresKod = pscToOkres.get(r.psc)
     if (!okresKod) continue // zahraničné alebo neznáme PSČ - nepatria do žiadneho okresu
     sOkresom++
-    const existujuci = poOkresoch.get(okresKod) ?? { pocet: 0, suma: 0 }
+    const existujuci = poOkresoch.get(okresKod) ?? { pocet: 0, suma: 0, najvacsi: 0 }
     existujuci.pocet++
     existujuci.suma += r.ciastka
+    existujuci.najvacsi = Math.max(existujuci.najvacsi, r.ciastka)
     poOkresoch.set(okresKod, existujuci)
   }
 
@@ -148,6 +149,7 @@ export async function syncDlznici(
     okresKod,
     pocetDlznikov: v.pocet,
     sumaDlhu: v.suma,
+    najvacsiDlh: v.najvacsi,
     aktualizovane,
   }))
 
