@@ -365,6 +365,12 @@ model OutreachFirm {
   prvyCheck      DateTime  @default(now()) @map("prvy_check")
   posledneCheck  DateTime? @map("posledne_check")
   poslaneVBriefe DateTime? @map("poslane_v_briefe")
+  kontaktEmail   String?   @map("kontakt_email")
+  kontaktTelefon String?   @map("kontakt_telefon")
+  profilUrl      String?   @map("profil_url")
+  webUrl         String?   @map("web_url")
+  googlePlaceId  String?   @map("google_place_id")
+  overeniePoznamka String? @map("overenie_poznamka")
 
   @@index([krajKod, stav])
   @@map("outreach_firm")

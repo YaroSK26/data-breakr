@@ -36,7 +36,7 @@ export async function summary() {
       supabase
         .from('outreach_firm')
         .select('*', { count: 'exact', head: true })
-        .eq('stav', 'ma_info')
+        .eq('stav', 'prospect')
         .is('poslane_v_briefe', null),
     ),
   ])

@@ -16,7 +16,8 @@ export async function pending() {
   const { data, error } = await supabase
     .from('outreach_firm')
     .select('*')
-    .in('stav', ['nove', 'bez_info'])
+    .in('stav', ['nove', 'ma_info', 'bez_info', 'bez_kontaktu'])
+    .order('posledne_check', { ascending: true, nullsFirst: true })
     .order('datum_vzniku', { ascending: false })
     .limit(MAX_NA_BEH)
   if (error) throw error

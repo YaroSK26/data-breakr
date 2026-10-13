@@ -7,13 +7,15 @@
 // Použitie: npx tsx scripts/outreach/mark-sent.ts
 import { supabase } from './supabase-client'
 
-export async function markSent() {
-  const { data, error } = await supabase
+export async function markSent(icos?: string[]) {
+  if (icos && icos.length === 0) return { oznacene: 0 }
+  let query = supabase
     .from('outreach_firm')
     .update({ poslane_v_briefe: new Date().toISOString() })
-    .eq('stav', 'ma_info')
+    .eq('stav', 'prospect')
     .is('poslane_v_briefe', null)
-    .select('ico')
+  if (icos) query = query.in('ico', icos)
+  const { data, error } = await query.select('ico')
   if (error) throw error
   return { oznacene: data?.length ?? 0 }
 }
