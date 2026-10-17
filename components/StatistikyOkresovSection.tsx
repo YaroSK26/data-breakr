@@ -334,6 +334,7 @@ export function StatistikyOkresovSection() {
 
       <DataSourceBanner
         sources={sources.filter((s) =>
+          s.sourceName.startsWith("ŠÚ SR - STATdata") ||
           s.sourceName.startsWith("ŠÚ SR - DATAcube"),
         )}
         note={

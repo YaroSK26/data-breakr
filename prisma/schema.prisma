@@ -298,7 +298,7 @@ model VznikAgg {
   @@map("vznik_agg")
 }
 
-// Okresné ukazovatele zo ŠÚ SR DATAcube (mzdy, zamestnanci, počty podnikov).
+// Okresné ukazovatele zo ŠÚ SR STATdata (mzdy, zamestnanci, počty podnikov).
 // Územný kód je ten istý ako districts.kod, takže sa spájajú priamo.
 //
 // Odvetvie je tu sekcia SK NACE **Rev. 2** (A, B, C, ... a agregáty ako

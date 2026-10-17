@@ -100,6 +100,7 @@ export function DensityMap({
   const [hovered, setHovered] = useState<(MunicipalityProps & DistrictDensity) | null>(null)
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null)
   const [districtBoundaries, setDistrictBoundaries] = useState<FeatureCollection | null>(null)
+  const [regionBoundaries, setRegionBoundaries] = useState<FeatureCollection | null>(null)
 
   // Municipality shapes and district outlines are both static - fetched
   // once on mount, independent of the NACE/metric filter. Only the
@@ -114,6 +115,11 @@ export function DensityMap({
       .then((r) => r.json())
       .then((d) => setDistrictBoundaries(d))
       .catch(() => setDistrictBoundaries(null))
+
+    fetch('/api/region-boundaries?v=2', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => setRegionBoundaries(d))
+      .catch(() => setRegionBoundaries(null))
   }, [])
 
   const valueFor = (okresKod: string): number | null => {
@@ -138,6 +144,16 @@ export function DensityMap({
       maxValue: values.length > 0 ? values[values.length - 1] : 0,
     }
   }, [densityByDistrict, metric])
+
+  const selectedRegionBoundary = useMemo<FeatureCollection | null>(() => {
+    if (!regionBoundaries || !selectedRegionCode) return null
+    return {
+      type: 'FeatureCollection',
+      features: regionBoundaries.features.filter(
+        (feature) => feature.properties?.kod === selectedRegionCode,
+      ),
+    }
+  }, [regionBoundaries, selectedRegionCode])
 
   const style: StyleFunction<MunicipalityProps> = (feature) => {
     const p = feature?.properties as MunicipalityProps | undefined
@@ -183,20 +199,15 @@ export function DensityMap({
         />
         {geoData && mapMode === 'data' && (
           <GeoJSON
-            key={`${metric}-${scaleMin}-${scaleMax}-${selectedRegionCode}`}
+            key={`${metric}-${scaleMin}-${scaleMax}`}
             data={geoData}
-            style={((feature) => {
-              const base = style(feature)
-              const p = feature?.properties as MunicipalityProps | undefined
-              const selected = Boolean(selectedRegionCode && p?.okresKod.startsWith(selectedRegionCode.slice(0, 4)))
-              return selected ? { ...base, color: '#dc2626', weight: 1.2 } : base
-            }) as StyleFunction}
+            style={style as StyleFunction}
             onEachFeature={onEachFeature as (feature: Feature, layer: Layer) => void}
           />
         )}
         {districtBoundaries && mapMode === 'data' && (
           <GeoJSON
-            key={`district-boundaries-${selectedRegionCode}`}
+            key="district-boundaries"
             data={districtBoundaries}
             // Decoration only - no fill, non-interactive so clicks pass
             // through to the municipality polygon underneath. Given its own
@@ -207,17 +218,21 @@ export function DensityMap({
             // change (its `key` changes) pushed it above the boundary
             // layer, making the district outlines flicker in and out.
             pane="districtBoundaryPane"
-            style={(feature) => {
-              const kod = String(feature?.properties?.kod ?? '')
-              const selected = Boolean(selectedRegionCode && kod.startsWith(selectedRegionCode.slice(0, 4)))
-              return {
-                fill: false,
-                color: selected ? '#dc2626' : '#475569',
-                weight: selected ? 3.2 : 1.8,
-                opacity: selectedRegionCode && !selected ? 0.45 : 1,
-                interactive: false,
-              }
-            }}
+            style={() => ({ fill: false, color: '#475569', weight: 1.8, interactive: false })}
+          />
+        )}
+        {selectedRegionBoundary && mapMode === 'data' && (
+          <GeoJSON
+            key={`selected-region-${selectedRegionCode}`}
+            data={selectedRegionBoundary}
+            pane="districtBoundaryPane"
+            style={() => ({
+              fill: false,
+              color: '#dc2626',
+              weight: 4,
+              opacity: 1,
+              interactive: false,
+            })}
           />
         )}
         <DistrictBoundaryPane />

@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma'
 import { upsertDataSource } from '../data-sources'
 import { syncBoundariesAndPopulation } from './sync-boundaries-population'
 import { computeDistrictBoundaries } from './compute-district-boundaries'
+import { computeRegionBoundaries } from './compute-region-boundaries'
 
 async function main() {
   const runStart = new Date()
@@ -17,6 +18,12 @@ async function main() {
   const districtResult = await computeDistrictBoundaries(prisma)
   console.log(
     `Districts computed: ${districtResult.computed}/${districtResult.total} (${districtResult.skipped} skipped, no municipality geometry).`
+  )
+
+  console.log('Dissolving district boundaries into precise region boundaries...')
+  const regionResult = await computeRegionBoundaries(prisma)
+  console.log(
+    `Regions computed: ${regionResult.computed}/${regionResult.total} (${regionResult.skipped} skipped, no district geometry).`
   )
 
   const totalMunicipalities = await prisma.municipality.count({ where: { population: { not: null } } })

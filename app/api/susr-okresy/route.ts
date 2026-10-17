@@ -1,6 +1,6 @@
 // app/api/susr-okresy/route.ts
 //
-// Okresné ukazovatele zo ŠÚ SR DATAcube (mzdy, zamestnanci, počty podnikov).
+// Okresné ukazovatele zo ŠÚ SR STATdata (mzdy, zamestnanci, počty podnikov).
 // Vlastný endpoint aj vlastná stránka - zámerne oddelené od mapy firiem:
 // odvetvia sú tu sekcie SK NACE Rev. 2, kým register firiem beží na
 // Rev. 2.1. Spojiť ich do jedného filtra by znamenalo, že polovica čísel na

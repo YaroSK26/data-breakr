@@ -6,7 +6,7 @@ import { syncSusr } from './sync'
 async function main() {
   const runStart = new Date()
 
-  console.log('Sťahujem okresné ukazovatele zo ŠÚ SR DATAcube...')
+  console.log('Sťahujem okresné ukazovatele zo ŠÚ SR STATdata...')
   const vysledok = await syncSusr(prisma)
 
   for (const [dataset, pocet] of Object.entries(vysledok.podlaDatasetu)) {
@@ -15,10 +15,13 @@ async function main() {
   console.log(`Spolu ${vysledok.spolu} riadkov.`)
 
   await upsertDataSource(prisma, {
-    sourceName: 'ŠÚ SR - DATAcube (okresné ukazovatele)',
-    sourceUrl: 'https://datacube.statistics.sk/',
+    sourceName: 'ŠÚ SR - STATdata (okresné ukazovatele)',
+    sourceUrl: 'https://statdata.statistics.sk/',
     lastSyncedAt: runStart,
     recordsCount: vysledok.spolu,
+  })
+  await prisma.dataSource.deleteMany({
+    where: { sourceName: 'ŠÚ SR - DATAcube (okresné ukazovatele)' },
   })
 
   console.log('Hotovo.')

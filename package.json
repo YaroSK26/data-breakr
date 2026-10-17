@@ -12,6 +12,7 @@
     "ingest:rpo-bulk": "tsx scripts/ingest/rpo/run-bulk.ts",
     "ingest:rpo-daily": "tsx scripts/ingest/rpo/run-daily.ts",
     "ingest:geo": "tsx scripts/ingest/geo/run.ts",
+    "compute:region-boundaries": "tsx scripts/ingest/geo/run-region-boundaries.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate",
