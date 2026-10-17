@@ -50,6 +50,11 @@ function useYearTickInterval(): number {
 
 export function StatsCharts({ stats }: { stats: Stats }) {
   const yearTickInterval = useYearTickInterval()
+  const currentYear = new Date().getFullYear()
+  const yearData = stats.byYear.map((item) => ({
+    ...item,
+    rokLabel: item.rok === currentYear ? `${item.rok}*` : String(item.rok),
+  }))
   return (
     <>
       <div style={{ ...CARD_STYLE, paddingLeft: 8 }}>
@@ -112,13 +117,13 @@ export function StatsCharts({ stats }: { stats: Stats }) {
       <div style={CARD_STYLE}>
         <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>Registrácie podľa roku (od 1995)</h2>
         <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>
-          Počet firiem so vznikom v danom roku (aktívne aj odvtedy zaniknuté) - podľa dátumu vzniku v registri
+          Počet firiem so vznikom v danom roku (aktívne aj odvtedy zaniknuté) - podľa dátumu vzniku v registri. * {currentYear} (prebieha)
         </p>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={stats.byYear}>
+          <LineChart data={yearData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis
-              dataKey="rok"
+              dataKey="rokLabel"
               tick={{ fontSize: 12, fill: '#64748b' }}
               // recharts' default "auto" interval skips labels
               // inconsistently (crowds some years, leaves big gaps at
@@ -127,8 +132,20 @@ export function StatsCharts({ stats }: { stats: Stats }) {
               interval={yearTickInterval}
             />
             <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
-            <Tooltip formatter={(v) => [Number(v).toLocaleString('sk-SK'), 'firiem']} contentStyle={{ fontSize: 13, borderRadius: 8 }} />
-            <Line type="monotone" dataKey="pocet" stroke={BAR_COLOR} strokeWidth={2} dot={false} />
+            <Tooltip
+              formatter={(v) => [Number(v).toLocaleString('sk-SK'), 'firiem']}
+              labelFormatter={(label) => label === `${currentYear}*` ? `${currentYear} (prebieha)` : label}
+              contentStyle={{ fontSize: 13, borderRadius: 8 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="pocet"
+              stroke={BAR_COLOR}
+              strokeWidth={2}
+              dot={(props) => props.payload?.rok === currentYear
+                ? <circle key={props.key} cx={props.cx} cy={props.cy} r={5} fill="#dc2626" stroke="white" strokeWidth={2} />
+                : <circle key={props.key} cx={props.cx} cy={props.cy} r={0} />}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

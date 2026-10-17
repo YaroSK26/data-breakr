@@ -152,7 +152,7 @@ export function RychlyPrehlad() {
           fontWeight: 700,
           fontSize: 14,
           cursor: 'pointer',
-          boxShadow: '0 6px 20px rgba(37,99,235,0.35)',
+          boxShadow: '0 8px 28px rgba(15,23,42,0.5), 0 0 0 2px rgba(255,255,255,0.9)',
         }}
       >
         <span aria-hidden style={{ fontSize: 16 }}>◎</span>

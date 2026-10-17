@@ -53,6 +53,13 @@ a {
   text-decoration: none;
 }
 
+@media (min-width: 900px) {
+  .hero-slovakia-map {
+    transform: scale(1.16);
+    transform-origin: center;
+  }
+}
+
 .nav-link {
   padding: 6px 14px;
   border-radius: 6px;

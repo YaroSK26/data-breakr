@@ -141,7 +141,9 @@ function MapaHustotyFiriem() {
       .then((d) => setCategories(d.categories))
       .catch(() => setCategories([]));
 
-    fetch("/api/kraje")
+    // Verzia v URL obíde starú odpoveď uloženú v cache prehliadača,
+    // v ktorej boli dve technické položky "Zahraničie".
+    fetch("/api/kraje?v=2", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setKraje(d.regions))
       .catch(() => setKraje([]));
@@ -388,6 +390,7 @@ function MapaHustotyFiriem() {
                 ? undefined
                 : (kod, nazov) => setSelectedDistrict({ kod, nazov })
             }
+            selectedRegionCode={krajParam}
           />
         </div>
 

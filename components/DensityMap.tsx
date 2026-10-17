@@ -83,6 +83,7 @@ interface DensityMapProps {
   // druhý riadok v tooltipe vždy hlásil "chýbajú dáta", čo je zavádzajúce
   // (dáta nechýbajú, tá metrika tam len neexistuje).
   skryTooltipPerCapita?: boolean
+  selectedRegionCode?: string
 }
 
 export function DensityMap({
@@ -93,7 +94,9 @@ export function DensityMap({
   popisHodnoty = 'Prevádzok',
   popisLegendy = { absolute: 'Počet firiem', perCapita: 'Na 1000 obyvateľov', dphShare: '% platcov DPH' },
   skryTooltipPerCapita = false,
+  selectedRegionCode = '',
 }: DensityMapProps) {
+  const [mapMode, setMapMode] = useState<'data' | 'base'>('data')
   const [hovered, setHovered] = useState<(MunicipalityProps & DistrictDensity) | null>(null)
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null)
   const [districtBoundaries, setDistrictBoundaries] = useState<FeatureCollection | null>(null)
@@ -178,17 +181,22 @@ export function DensityMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {geoData && (
+        {geoData && mapMode === 'data' && (
           <GeoJSON
-            key={metric + scaleMin + scaleMax}
+            key={`${metric}-${scaleMin}-${scaleMax}-${selectedRegionCode}`}
             data={geoData}
-            style={style as StyleFunction}
+            style={((feature) => {
+              const base = style(feature)
+              const p = feature?.properties as MunicipalityProps | undefined
+              const selected = Boolean(selectedRegionCode && p?.okresKod.startsWith(selectedRegionCode.slice(0, 4)))
+              return selected ? { ...base, color: '#dc2626', weight: 1.2 } : base
+            }) as StyleFunction}
             onEachFeature={onEachFeature as (feature: Feature, layer: Layer) => void}
           />
         )}
-        {districtBoundaries && (
+        {districtBoundaries && mapMode === 'data' && (
           <GeoJSON
-            key="district-boundaries"
+            key={`district-boundaries-${selectedRegionCode}`}
             data={districtBoundaries}
             // Decoration only - no fill, non-interactive so clicks pass
             // through to the municipality polygon underneath. Given its own
@@ -199,12 +207,63 @@ export function DensityMap({
             // change (its `key` changes) pushed it above the boundary
             // layer, making the district outlines flicker in and out.
             pane="districtBoundaryPane"
-            style={() => ({ fill: false, color: '#475569', weight: 1.8, interactive: false })}
+            style={(feature) => {
+              const kod = String(feature?.properties?.kod ?? '')
+              const selected = Boolean(selectedRegionCode && kod.startsWith(selectedRegionCode.slice(0, 4)))
+              return {
+                fill: false,
+                color: selected ? '#dc2626' : '#475569',
+                weight: selected ? 3.2 : 1.8,
+                opacity: selectedRegionCode && !selected ? 0.45 : 1,
+                interactive: false,
+              }
+            }}
           />
         )}
         <DistrictBoundaryPane />
         <FitToData />
       </MapContainer>
+
+      <div
+        role="group"
+        aria-label="Režim mapy"
+        style={{
+          position: 'absolute',
+          top: 12,
+          left: 52,
+          zIndex: 1000,
+          display: 'flex',
+          padding: 3,
+          gap: 2,
+          borderRadius: 8,
+          background: 'white',
+          boxShadow: '0 2px 10px rgba(15,23,42,0.2)',
+        }}
+      >
+        {([
+          ['data', 'Dátová mapa'],
+          ['base', 'Bežná mapa'],
+        ] as const).map(([mode, label]) => (
+          <button
+            key={mode}
+            type="button"
+            aria-pressed={mapMode === mode}
+            onClick={() => setMapMode(mode)}
+            style={{
+              border: 0,
+              borderRadius: 6,
+              padding: '7px 10px',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 700,
+              background: mapMode === mode ? '#2563eb' : 'transparent',
+              color: mapMode === mode ? 'white' : '#334155',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       {loading && (
         <div
@@ -248,13 +307,13 @@ export function DensityMap({
         </div>
       )}
 
-      <Legend
+      {mapMode === 'data' && <Legend
         scaleMin={scaleMin}
         scaleMax={scaleMax}
         maxValue={maxValue}
         metric={metric}
         popisLegendy={popisLegendy}
-      />
+      />}
 
       {hovered && (
         <div

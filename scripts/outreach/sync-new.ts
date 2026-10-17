@@ -19,7 +19,8 @@
 import { supabase } from './supabase-client'
 
 const KOSICKY_KRAJ = 'SK042'
-const DNI_SPATNE = 5
+// Týždenný cron + dvojdňová rezerva pre oneskorený alebo zmeškaný beh.
+const DNI_SPATNE = 9
 
 export async function syncNew() {
   const cutoff = new Date()
