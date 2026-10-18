@@ -510,9 +510,7 @@ export function ZaniknuteFirmySection() {
           Okresy s najvyšším podielom zaniknutých
         </h3>
         <p style={{ color: "#64748b", margin: "0 0 14px", fontSize: 13 }}>
-          Z celkového počtu subjektov v okrese (zaniklo / zaniklo + aktívnych) -
-          na rozdiel od rebríčka odvetví nižšie tu nejde o výber z tých 5 %,
-          ktorým RPO priradilo odvetvie.
+          Z celkového počtu subjektov v okrese (zaniklo / (zaniklo + aktívnych)).
         </p>
         <div style={{ height: 300 }}>
           {loading ? (

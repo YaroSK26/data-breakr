@@ -28,21 +28,21 @@ const DensityMap = dynamic(
 const UKAZOVATELE = [
   {
     kod: "PRIEM_MZDA",
-    nazov: "Priemerná mesačná mzda",
+    nazov: "Mzda vo väčších podnikoch (20+)",
     jednotka: "€",
     popis:
       "Priemerná hrubá mesačná mzda zamestnanca, zistená pracoviskovou metódou. Zahŕňa podniky s 20 a viac zamestnancami.",
   },
   {
     kod: "ZAMESTNANCI",
-    nazov: "Počet zamestnancov",
+    nazov: "Zamestnanci vo väčších podnikoch (20+)",
     jednotka: "",
     popis:
       "Priemerný evidenčný počet zamestnancov v podnikoch s 20 a viac zamestnancami.",
   },
   {
     kod: "PODNIKY",
-    nazov: "Počet podnikov",
+    nazov: "Všetky ekonomicky aktívne podniky",
     jednotka: "",
     popis:
       "Ekonomicky aktívne subjekty v štatistickom registri organizácií ŠÚ SR k 31. 12. daného roka.",
@@ -159,14 +159,16 @@ export function StatistikyOkresovSection() {
           lineHeight: 1.55,
         }}
       >
-        <strong>Iná klasifikácia než na mape firiem.</strong> Odvetvia sú tu
+        <strong>Tieto tri ukazovatele nemajú rovnaké pokrytie.</strong>{" "}
+        „Všetky ekonomicky aktívne podniky“ zahŕňajú aj malé subjekty, ale
+        mzda a zamestnanci pochádzajú iba z podnikov s 20 a viac zamestnancami.
+        Preto z týchto hodnôt nepočítame zamestnancov na podnik ani ich navzájom
+        neporovnávame. Odvetvia sú tu
         sekcie <strong>SK NACE Rev. 2</strong> (A, B, C…), kým register firiem
         beží na novšej <strong>Rev. 2.1</strong>. Písmená sekcií si medzi
         revíziami nezodpovedajú - napríklad IT je v Rev. 2.1 v sekcii K, v
         Rev. 2 v sekcii J. Preto sa tieto čísla nedajú priamo sčítať s
-        počtami firiem z mapy hustoty vyššie. Mzdy a zamestnanci sa navyše
-        zisťujú len v podnikoch s 20 a viac zamestnancami, čiže živnostníkov
-        a malé firmy nepokrývajú.
+        počtami firiem z mapy hustoty vyššie.
       </div>
 
       <section

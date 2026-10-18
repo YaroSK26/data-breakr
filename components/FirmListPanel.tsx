@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { buttonOutline } from "./buttonStyles";
-import { LEGAL_FORMS } from "@/lib/legalForms";
+import { LegalFormsMultiSelect } from "./LegalFormsMultiSelect";
 
 interface Firm {
   id: string;
@@ -45,7 +45,8 @@ interface FirmListPanelProps {
   okresKod: string;
   okresNazov: string;
   naceFilter: string;
-  formaFilter: string;
+  formaFilter: string[];
+  personType: string;
   categories: CategoryLookup[];
   onClose: () => void;
 }
@@ -55,6 +56,7 @@ export function FirmListPanel({
   okresNazov,
   naceFilter,
   formaFilter,
+  personType,
   categories,
   onClose,
 }: FirmListPanelProps) {
@@ -72,6 +74,11 @@ export function FirmListPanel({
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
+  // Keep an already-open panel aligned with subsequent changes made in
+  // the map filters. Previously these values were copied only on mount.
+  useEffect(() => setLocalNace(naceFilter), [naceFilter]);
+  useEffect(() => setLocalForma(formaFilter), [formaFilter]);
+
   useEffect(() => {
     setOffset(0);
   }, [okresKod, localNace, localForma, debouncedQuery]);
@@ -88,7 +95,8 @@ export function FirmListPanel({
       offset: String(offset),
     });
     if (localNace) params.set("nace", localNace);
-    if (localForma) params.set("forma", localForma);
+    if (localForma.length) params.set("forma", localForma.join(","));
+    if (!localForma.length && personType) params.set("typ", personType);
     if (debouncedQuery) params.set("q", debouncedQuery);
     fetch(`/api/firms-in-district?${params.toString()}`)
       .then((r) => r.json())
@@ -97,7 +105,7 @@ export function FirmListPanel({
         setTotal(d.total);
       })
       .finally(() => setLoading(false));
-  }, [okresKod, localNace, localForma, debouncedQuery, offset]);
+  }, [okresKod, localNace, localForma, personType, debouncedQuery, offset]);
 
   return (
     <div
@@ -193,23 +201,7 @@ export function FirmListPanel({
               </optgroup>
             ))}
           </select>
-          <select
-            value={localForma}
-            onChange={(e) => setLocalForma(e.target.value)}
-            style={{
-              padding: "7px 10px",
-              borderRadius: 6,
-              border: "1px solid #cbd5e1",
-              fontSize: 13,
-            }}
-          >
-            <option value="">Všetky právne formy</option>
-            {LEGAL_FORMS.map((f) => (
-              <option key={f.kod} value={f.kod}>
-                {f.nazov}
-              </option>
-            ))}
-          </select>
+          <LegalFormsMultiSelect value={localForma} onChange={setLocalForma} compact />
         </div>
       </div>
 

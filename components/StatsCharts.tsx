@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Stats } from '@/app/page'
 
 const BAR_COLOR = '#2563eb'
@@ -51,16 +51,18 @@ function useYearTickInterval(): number {
 export function StatsCharts({ stats }: { stats: Stats }) {
   const yearTickInterval = useYearTickInterval()
   const currentYear = new Date().getFullYear()
-  const yearData = stats.byYear.map((item) => ({
+  const yearData = stats.byYear.slice(-10).map((item) => ({
     ...item,
     rokLabel: item.rok === currentYear ? `${item.rok}*` : String(item.rok),
   }))
+  const topDistrictTotal = stats.byDistrict.reduce((sum, district) => sum + district.pocet, 0)
+  const topDistrictShare = stats.totalActive > 0 ? Math.round((topDistrictTotal / stats.totalActive) * 100) : 0
   return (
     <>
       <div style={{ ...CARD_STYLE, paddingLeft: 8 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px', paddingLeft: 12 }}>Kde je najviac firiem</h2>
-        <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 4px', paddingLeft: 12 }}>Top 15 okresov (mestských častí) podľa počtu aktívnych firiem</p>
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px', paddingLeft: 12 }}>Kde je najviac aktívnych subjektov</h2>
         <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', paddingLeft: 12 }}>
+          Nejde iba o s. r. o.: započítané sú všetky právne formy vrátane živnostníkov a SZČO.{' '}
           Bratislava (5 okresov) a Košice (4 okresy) sú tu zjednotené za celé mesto - inak by ich formálne
           administratívne delenie nespravodlivo znížilo ich pozíciu oproti jednookresovým mestám ako Žilina.
         </p>
@@ -76,7 +78,7 @@ export function StatsCharts({ stats }: { stats: Stats }) {
             />
             <Tooltip
               cursor={false}
-              formatter={(v) => [Number(v).toLocaleString('sk-SK'), 'firiem']}
+              formatter={(v) => [Number(v).toLocaleString('sk-SK'), 'aktívnych subjektov']}
               contentStyle={{ fontSize: 13, borderRadius: 8 }}
             />
             <Bar dataKey="pocet" radius={[0, 4, 4, 0]}>
@@ -86,6 +88,23 @@ export function StatsCharts({ stats }: { stats: Stats }) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      <div style={CARD_STYLE}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>Aktívne subjekty podľa právnej formy</h2>
+        <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>
+          Koľko je v registri s. r. o., živnostníkov, akciových spoločností a ostatných foriem.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', columnGap: 28 }}>
+          {stats.byLegalForm.map((form) => (
+            <div key={form.kod} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '9px 0', borderTop: '1px solid #e2e8f0', fontSize: 13 }}>
+              <span style={{ color: '#334155' }}>{form.nazov}</span>
+              <strong style={{ color: '#0f172a', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                {form.pocet.toLocaleString('sk-SK')}
+              </strong>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={CARD_STYLE}>
@@ -115,21 +134,17 @@ export function StatsCharts({ stats }: { stats: Stats }) {
       </div>
 
       <div style={CARD_STYLE}>
-        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>Registrácie podľa roku (od 1995)</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>Koľko subjektov vzniklo za posledné roky</h2>
         <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>
-          Počet firiem so vznikom v danom roku (aktívne aj odvtedy zaniknuté) - podľa dátumu vzniku v registri. * {currentYear} (prebieha)
+          Počet subjektov so vznikom v danom roku (aktívne aj odvtedy zaniknuté). Svetlomodrý stĺpec {currentYear} je neúplný – rok ešte prebieha.
         </p>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={yearData}>
+          <BarChart data={yearData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis
               dataKey="rokLabel"
               tick={{ fontSize: 12, fill: '#64748b' }}
-              // recharts' default "auto" interval skips labels
-              // inconsistently (crowds some years, leaves big gaps at
-              // others) - a fixed, viewport-aware interval is predictable
-              // and thins out further on narrow/mobile screens.
-              interval={yearTickInterval}
+              interval={yearTickInterval > 1 ? 1 : 0}
             />
             <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
             <Tooltip
@@ -137,16 +152,12 @@ export function StatsCharts({ stats }: { stats: Stats }) {
               labelFormatter={(label) => label === `${currentYear}*` ? `${currentYear} (prebieha)` : label}
               contentStyle={{ fontSize: 13, borderRadius: 8 }}
             />
-            <Line
-              type="monotone"
-              dataKey="pocet"
-              stroke={BAR_COLOR}
-              strokeWidth={2}
-              dot={(props) => props.payload?.rok === currentYear
-                ? <circle key={props.key} cx={props.cx} cy={props.cy} r={5} fill="#dc2626" stroke="white" strokeWidth={2} />
-                : <circle key={props.key} cx={props.cx} cy={props.cy} r={0} />}
-            />
-          </LineChart>
+            <Bar dataKey="pocet" radius={[4, 4, 0, 0]}>
+              {yearData.map((item) => (
+                <Cell key={item.rok} fill={item.rok === currentYear ? '#93c5fd' : BAR_COLOR} />
+              ))}
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </>

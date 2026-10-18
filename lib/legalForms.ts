@@ -30,3 +30,13 @@ export const LEGAL_FORMS: { kod: string; nazov: string }[] = [
   { kod: '751', nazov: 'Záujmové združenie právnických osôb' },
   { kod: '801', nazov: 'Obec / mesto' },
 ]
+
+export const PERSON_TYPE_CODES = {
+  fyzicke: ['001', '101', '102', '103', '105'],
+} as const
+
+export type PersonType = '' | 'fyzicke' | 'pravnicke'
+
+export function isPersonType(value: string | null): value is PersonType {
+  return value === '' || value === 'fyzicke' || value === 'pravnicke'
+}

@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { resolveNaceFilter } from '@/lib/nace'
+import { isPersonType, PERSON_TYPE_CODES } from '@/lib/legalForms'
 
 const PAGE_SIZE = 100
 
@@ -33,7 +34,10 @@ interface FirmRow {
 export async function GET(req: NextRequest) {
   const okres = req.nextUrl.searchParams.get('okres')
   const nace = req.nextUrl.searchParams.get('nace')
-  const forma = req.nextUrl.searchParams.get('forma')
+  const formy = (req.nextUrl.searchParams.get('forma') ?? '').split(',').filter(Boolean)
+  const typRaw = req.nextUrl.searchParams.get('typ') ?? ''
+  const typ = isPersonType(typRaw) ? typRaw : ''
+  const fyzickeKody = [...PERSON_TYPE_CODES.fyzicke]
   const q = req.nextUrl.searchParams.get('q')
   const offset = Number(req.nextUrl.searchParams.get('offset') ?? '0')
 
@@ -50,7 +54,9 @@ export async function GET(req: NextRequest) {
     okres_kod = ${okres}
     AND datum_zaniku IS NULL
     ${naceCodes.length > 0 ? Prisma.sql`AND nace_kod4 IN (${Prisma.join(naceCodes)})` : Prisma.empty}
-    ${forma ? Prisma.sql`AND pravna_forma_kod = ${forma}` : Prisma.empty}
+    ${formy.length ? Prisma.sql`AND pravna_forma_kod IN (${Prisma.join(formy)})` : Prisma.empty}
+    ${!formy.length && typ === 'fyzicke' ? Prisma.sql`AND pravna_forma_kod IN (${Prisma.join(fyzickeKody)})` : Prisma.empty}
+    ${!formy.length && typ === 'pravnicke' ? Prisma.sql`AND (pravna_forma_kod IS NULL OR pravna_forma_kod NOT IN (${Prisma.join(fyzickeKody)}))` : Prisma.empty}
     ${q ? Prisma.sql`AND nazov ILIKE ${'%' + q + '%'}` : Prisma.empty}
   `
 

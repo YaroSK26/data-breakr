@@ -7,7 +7,8 @@ import { DataSourceBanner } from "@/components/DataSourceBanner";
 import { FirmListPanel } from "@/components/FirmListPanel";
 import { Hero } from "@/components/Hero";
 import { SearchableSelect } from "@/components/SearchableSelect";
-import { LEGAL_FORMS } from "@/lib/legalForms";
+import { LegalFormsMultiSelect } from "@/components/LegalFormsMultiSelect";
+import { LEGAL_FORMS, PERSON_TYPE_CODES, type PersonType } from "@/lib/legalForms";
 import type { Metric, DistrictDensity } from "@/components/DensityMap";
 
 const DensityMap = dynamic(
@@ -62,6 +63,11 @@ interface DataSource {
   recordsCount: number | null;
 }
 
+const PHYSICAL_PERSON_FORM_CODES: string[] = [...PERSON_TYPE_CODES.fyzicke];
+const LEGAL_PERSON_FORM_CODES: string[] = LEGAL_FORMS
+  .map((form) => form.kod)
+  .filter((kod) => !PHYSICAL_PERSON_FORM_CODES.includes(kod));
+
 export interface Stats {
   totalActive: number;
   totalTerminated: number;
@@ -69,6 +75,8 @@ export interface Stats {
   byCategory: { kod4: string; nazov: string; pocet: number }[];
   byYear: { rok: number; pocet: number }[];
   computedAt?: string;
+  zaniklo2025: number;
+  byLegalForm: { kod: string; nazov: string; pocet: number }[];
 }
 
 function MapaHustotyFiriem() {
@@ -87,12 +95,43 @@ function MapaHustotyFiriem() {
   const [krajParam, setKrajParam] = useState(
     () => searchParams.get("kraj") ?? "",
   );
-  const [formaParam, setFormaParam] = useState(
-    () => searchParams.get("forma") ?? "",
+  const [formaParams, setFormaParams] = useState<string[]>(
+    () => {
+      const explicit = (searchParams.get("forma") ?? "").split(",").filter(Boolean);
+      if (explicit.length) return explicit;
+      const type = searchParams.get("typ");
+      if (type === "fyzicke") return PHYSICAL_PERSON_FORM_CODES;
+      if (type === "pravnicke") return LEGAL_PERSON_FORM_CODES;
+      return [];
+    },
   );
+  const [personType, setPersonType] = useState<PersonType>(() => {
+    const value = searchParams.get("typ");
+    return value === "fyzicke" || value === "pravnicke" ? value : "";
+  });
   const [metricParam, setMetricParam] = useState<Metric>(
     () => (searchParams.get("metrika") as Metric) ?? "absolute",
   );
+
+  // The top-level choice is authoritative. Keeping this derived prevents a
+  // stale custom form selection (including state preserved by Fast Refresh)
+  // from visually disagreeing with the highlighted subject-type button.
+  const effectiveFormaParams = personType === "fyzicke"
+    ? PHYSICAL_PERSON_FORM_CODES
+    : personType === "pravnicke"
+      ? LEGAL_PERSON_FORM_CODES
+      : formaParams;
+
+  const selectPersonType = (type: PersonType) => {
+    setPersonType(type);
+    if (type === "fyzicke") {
+      setFormaParams(PHYSICAL_PERSON_FORM_CODES);
+    } else if (type === "pravnicke") {
+      setFormaParams(LEGAL_PERSON_FORM_CODES);
+    } else {
+      setFormaParams([]);
+    }
+  };
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [kraje, setKraje] = useState<Kraj[]>([]);
@@ -163,22 +202,24 @@ function MapaHustotyFiriem() {
     const params = new URLSearchParams();
     if (naceParam) params.set("nace", naceParam);
     if (krajParam) params.set("kraj", krajParam);
-    if (formaParam) params.set("forma", formaParam);
+    if (effectiveFormaParams.length) params.set("forma", effectiveFormaParams.join(","));
+    if (personType) params.set("typ", personType);
     if (metricParam !== "absolute") params.set("metrika", metricParam);
     router.replace(`/?${params.toString()}`, { scroll: false });
-  }, [naceParam, krajParam, formaParam, metricParam, router]);
+  }, [naceParam, krajParam, effectiveFormaParams, personType, metricParam, router]);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (naceParam) params.set("nace", naceParam);
     if (krajParam) params.set("kraj", krajParam);
-    if (formaParam) params.set("forma", formaParam);
+    if (effectiveFormaParams.length) params.set("forma", effectiveFormaParams.join(","));
+    if (!effectiveFormaParams.length && personType) params.set("typ", personType);
     fetch(`/api/density?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => setDensityByDistrict(d.byDistrict))
       .finally(() => setLoading(false));
-  }, [naceParam, krajParam, formaParam]);
+  }, [naceParam, krajParam, effectiveFormaParams, personType]);
 
   return (
     <>
@@ -209,6 +250,36 @@ function MapaHustotyFiriem() {
             zaniknuté subjekty sa evidujú len ako súhrny bez týchto detailov.
           </p>
         ) : (
+        <>
+        <section style={{ marginBottom: 12 }} aria-label="Typ subjektu">
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Koho chcete zobraziť?</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {([
+              ["", "Všetky subjekty"],
+              ["fyzicke", "Živnostníci a SZČO"],
+              ["pravnicke", "Právnické osoby"],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={personType === value}
+                onClick={() => selectPersonType(value)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  border: `1px solid ${personType === value ? "#2563eb" : "#cbd5e1"}`,
+                  background: personType === value ? "#2563eb" : "white",
+                  color: personType === value ? "white" : "#334155",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >{label}</button>
+            ))}
+          </div>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#64748b" }}>
+            Výber mení mapu aj otvorený zoznam. Celkový počet podnikajúcich v úvode ostáva za celý register.
+          </p>
+        </section>
         <section
           style={{
             display: "flex",
@@ -239,6 +310,7 @@ function MapaHustotyFiriem() {
                 value: c.kod4,
                 label: `${c.nazov} (${c.kod4})`,
                 keywords: `${c.sekcia} ${c.sekciaNazov}`,
+                groupLabel: `${c.sekcia} – ${c.sekciaNazov}`,
               }))}
               value={naceParam}
               onChange={setNaceParam}
@@ -288,23 +360,10 @@ function MapaHustotyFiriem() {
             >
               Právna forma
             </label>
-            <select
-              value={formaParam}
-              onChange={(e) => setFormaParam(e.target.value)}
-              style={{
-                padding: "8px 10px",
-                borderRadius: 6,
-                border: "1px solid #cbd5e1",
-                width: "100%",
-              }}
-            >
-              <option value="">Všetky formy</option>
-              {LEGAL_FORMS.map((f) => (
-                <option key={f.kod} value={f.kod}>
-                  {f.nazov}
-                </option>
-              ))}
-            </select>
+            <LegalFormsMultiSelect
+              value={effectiveFormaParams}
+              onChange={(value) => { setFormaParams(value); setPersonType(""); }}
+            />
           </div>
 
           <div style={{ flex: "1 1 260px" }}>
@@ -364,6 +423,7 @@ function MapaHustotyFiriem() {
             </div>
           </div>
         </section>
+        </>
         )}
 
         <div
@@ -445,14 +505,19 @@ function MapaHustotyFiriem() {
                   color="#2563eb"
                 />
                 <StatCard
-                  label="Zaniknutých firiem (od roku 1995)"
-                  value={stats.totalTerminated.toLocaleString("sk-SK")}
-                  color="#94a3b8"
+                  label="Vzniklo v roku 2025"
+                  value={(stats.byYear.find((item) => item.rok === 2025)?.pocet ?? 0).toLocaleString("sk-SK")}
+                  color="#16a34a"
                 />
                 <StatCard
-                  label="Podiel zaniknutých"
-                  value={`${((stats.totalTerminated / (stats.totalActive + stats.totalTerminated)) * 100).toFixed(1)} %`}
+                  label="Zaniklo v roku 2025"
+                  value={stats.zaniklo2025.toLocaleString("sk-SK")}
                   color="#dc2626"
+                />
+                <StatCard
+                  label="Čistý prírastok 2025"
+                  value={`${((stats.byYear.find((item) => item.rok === 2025)?.pocet ?? 0) - stats.zaniklo2025 >= 0 ? "+" : "")}${((stats.byYear.find((item) => item.rok === 2025)?.pocet ?? 0) - stats.zaniklo2025).toLocaleString("sk-SK")}`}
+                  color="#7c3aed"
                 />
               </div>
               <StatsCharts stats={stats} />
@@ -465,7 +530,8 @@ function MapaHustotyFiriem() {
             okresKod={selectedDistrict.kod}
             okresNazov={selectedDistrict.nazov}
             naceFilter={naceParam}
-            formaFilter={formaParam}
+            formaFilter={effectiveFormaParams}
+            personType={personType}
             categories={categories}
             onClose={() => setSelectedDistrict(null)}
           />

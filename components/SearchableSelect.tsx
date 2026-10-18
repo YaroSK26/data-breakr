@@ -9,6 +9,7 @@ export interface SearchableOption {
   // a class sits in, so typing "stavebníctvo" finds 43.21 even though the
   // word appears nowhere in that class's own name.
   keywords?: string
+  groupLabel?: string
 }
 
 interface SearchableSelectProps {
@@ -103,9 +104,14 @@ export function SearchableSelect({ options, value, onChange, placeholder, emptyO
           {filtered.length === 0 ? (
             <div style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>Nič nenájdené.</div>
           ) : (
-            filtered.map((o) => (
+            filtered.map((o, index) => (
+              <div key={o.value}>
+              {(index === 0 || filtered[index - 1]?.groupLabel !== o.groupLabel) && o.groupLabel && (
+                <div style={{ position: 'sticky', top: 0, zIndex: 1, padding: '9px 12px 5px', fontSize: 11, fontWeight: 700, color: '#64748b', background: '#f8fafc', borderTop: index ? '1px solid #e2e8f0' : 'none' }}>
+                  {o.groupLabel}
+                </div>
+              )}
               <div
-                key={o.value}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   onChange(o.value)
@@ -122,6 +128,7 @@ export function SearchableSelect({ options, value, onChange, placeholder, emptyO
                 onMouseLeave={(e) => (e.currentTarget.style.background = o.value === value ? '#eff6ff' : 'white')}
               >
                 {o.label}
+              </div>
               </div>
             ))
           )}

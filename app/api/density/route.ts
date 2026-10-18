@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveNaceFilter } from "@/lib/nace";
+import { isPersonType, PERSON_TYPE_CODES } from "@/lib/legalForms";
 
 interface DensityRow {
   okresKod: string;
@@ -19,7 +20,10 @@ interface DensityRow {
 export async function GET(req: NextRequest) {
   const nace = req.nextUrl.searchParams.get("nace");
   const kraj = req.nextUrl.searchParams.get("kraj");
-  const pravnaForma = req.nextUrl.searchParams.get("forma");
+  const pravneFormy = (req.nextUrl.searchParams.get("forma") ?? "").split(",").filter(Boolean);
+  const typRaw = req.nextUrl.searchParams.get("typ") ?? "";
+  const typ = isPersonType(typRaw) ? typRaw : "";
+  const fyzickeKody = [...PERSON_TYPE_CODES.fyzicke];
 
   // A ?nace= value can still be an SK NACE Rev. 2 code (an older shared
   // link, or a code copied from RÚZ-sourced data), so run it through the
@@ -30,7 +34,9 @@ export async function GET(req: NextRequest) {
     be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
     ${naceCodes.length > 0 ? Prisma.sql`AND be."nace_kod4" IN (${Prisma.join(naceCodes)})` : Prisma.empty}
     ${kraj ? Prisma.sql`AND be."kraj_kod" = ${kraj}` : Prisma.empty}
-    ${pravnaForma ? Prisma.sql`AND be."pravna_forma_kod" = ${pravnaForma}` : Prisma.empty}
+    ${pravneFormy.length ? Prisma.sql`AND be."pravna_forma_kod" IN (${Prisma.join(pravneFormy)})` : Prisma.empty}
+    ${!pravneFormy.length && typ === "fyzicke" ? Prisma.sql`AND be."pravna_forma_kod" IN (${Prisma.join(fyzickeKody)})` : Prisma.empty}
+    ${!pravneFormy.length && typ === "pravnicke" ? Prisma.sql`AND (be."pravna_forma_kod" IS NULL OR be."pravna_forma_kod" NOT IN (${Prisma.join(fyzickeKody)}))` : Prisma.empty}
   `;
 
   const rows = await prisma.$queryRaw<DensityRow[]>`
