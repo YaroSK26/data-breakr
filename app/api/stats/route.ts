@@ -14,6 +14,8 @@ interface LegalFormRow {
   pocet: bigint
 }
 
+const OTHER_LEGAL_FORM_CODES = new Set(['001', '005', '102'])
+
 export async function GET() {
   const cache = await prisma.statsCache.findUnique({ where: { key: 'homepage' } })
 
@@ -36,17 +38,36 @@ export async function GET() {
     `),
   ])
   const legalFormNames = new Map(LEGAL_FORMS.map((form) => [form.kod, form.nazov]))
+  const isOtherLegalForm = (kod: string) =>
+    OTHER_LEGAL_FORM_CODES.has(kod) || (kod !== 'NEUVEDENE' && !legalFormNames.has(kod))
+  const otherLegalFormsCount = legalFormRows.reduce(
+    (sum, form) => sum + (isOtherLegalForm(form.kod) ? Number(form.pocet) : 0),
+    0,
+  )
+  const byLegalForm = legalFormRows
+    .filter((form) => !isOtherLegalForm(form.kod))
+    .map((form) => ({
+      kod: form.kod,
+      nazov: form.kod === 'NEUVEDENE'
+        ? 'Bez uvedenej právnej formy'
+        : legalFormNames.get(form.kod)!,
+      pocet: Number(form.pocet),
+    }))
+
+  if (otherLegalFormsCount > 0) {
+    byLegalForm.push({
+      kod: 'INE',
+      nazov: 'Iné',
+      pocet: otherLegalFormsCount,
+    })
+  }
+
+  byLegalForm.sort((a, b) => b.pocet - a.pocet)
 
   return NextResponse.json({
     ...(cache.data as object),
     zaniklo2025: Number(zaniky?.pocet ?? 0),
-    byLegalForm: legalFormRows.map((form) => ({
-      kod: form.kod,
-      nazov: form.kod === 'NEUVEDENE'
-        ? 'Bez uvedenej právnej formy'
-        : (legalFormNames.get(form.kod) ?? `Iná právna forma (${form.kod})`),
-      pocet: Number(form.pocet),
-    })),
+    byLegalForm,
     computedAt: cache.computedAt,
   })
 }
