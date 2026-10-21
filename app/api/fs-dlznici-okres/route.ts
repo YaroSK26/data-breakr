@@ -44,7 +44,7 @@ export async function GET() {
       SELECT be.okres_kod, COUNT(*) AS aktivnych, COUNT(fp.ico) AS platcov_dph
       FROM business_entities be
       LEFT JOIN fs_platca_dph fp ON fp.ico = be.ico
-      WHERE be.okres_kod IS NOT NULL
+      WHERE be.okres_kod IS NOT NULL AND be.stav = 'aktivny'
       GROUP BY be.okres_kod
     ) a ON a.okres_kod = d.kod
     LEFT JOIN (

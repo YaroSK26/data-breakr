@@ -219,17 +219,22 @@ model BusinessEntity {
   datumVzniku     DateTime? @map("datum_vzniku")
   datumZaniku     DateTime? @map("datum_zaniku")
   zdrojDat        String?   @map("zdroj_dat")
+  // Skutočný stav podľa RPO (lib/stavSubjektu.ts): 'aktivny', 'pozastaveny',
+  // 'likvidacia', 'konkurz', ... Chýbajúci dátum zániku aktivitu nedokazuje -
+  // firma v likvidácii ho ešte nemá. Všetky "aktívne" počty filtrujú na
+  // stav = 'aktivny'.
+  stav            String    @default("aktivny")
   lastSyncedAt    DateTime  @default(now()) @map("last_synced_at")
 
   // Both density aggregation (GROUP BY okres_kod, optionally filtered by
-  // nace_kod4) and the district drill-down list filter on datum_zaniku IS
-  // NULL alongside these - composite indexes so Postgres doesn't have to
+  // nace_kod4) and the district drill-down list filter on stav = 'aktivny'
+  // alongside these - composite indexes so Postgres doesn't have to
   // scan all 2M+ rows per request. Confirmed live: /api/density took 17s+
   // without these on the full national dataset.
-  @@index([okresKod, datumZaniku])
-  @@index([naceKod4, datumZaniku])
-  @@index([krajKod, datumZaniku])
-  @@index([pravnaFormaKod, datumZaniku])
+  @@index([okresKod, stav])
+  @@index([naceKod4, stav])
+  @@index([krajKod, stav])
+  @@index([pravnaFormaKod, stav])
   @@index([ico])
   @@index([datumVzniku])
   // "čerstvo vzniknuté firmy v kraji" (scripts/outreach/sync-new.ts). Cez

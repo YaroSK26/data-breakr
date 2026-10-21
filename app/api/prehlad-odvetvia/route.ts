@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
         COUNT(fp.ico) AS "platcovDph"
       FROM business_entities be
       LEFT JOIN fs_platca_dph fp ON fp.ico = be."ico"
-      WHERE be."okres_kod" = ${okres} AND be."datum_zaniku" IS NULL
+      WHERE be."okres_kod" = ${okres} AND be."stav" = 'aktivny'
       ${naceFilter}
     `,
     prisma.$queryRaw<RebricekRow[]>`
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
         FROM municipalities
         GROUP BY district_kod
       ) dp ON dp.district_kod = be."okres_kod"
-      WHERE be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
+      WHERE be."stav" = 'aktivny' AND be."okres_kod" IS NOT NULL
       ${naceFilter}
       GROUP BY be."okres_kod", d.nazov_sk
     `,

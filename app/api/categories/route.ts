@@ -43,7 +43,7 @@ export async function GET() {
     WHERE trieda.uroven = 4
       AND EXISTS (
         SELECT 1 FROM business_entities be
-        WHERE be.nace_kod4 = trieda.kod AND be.datum_zaniku IS NULL
+        WHERE be.nace_kod4 = trieda.kod AND be.stav = 'aktivny'
       )
     ORDER BY trieda.kod
   `

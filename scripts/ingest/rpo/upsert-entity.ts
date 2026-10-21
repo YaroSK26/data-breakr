@@ -1,6 +1,7 @@
 // scripts/ingest/rpo/upsert-entity.ts
 import type { PrismaClient } from '@prisma/client'
 import type { RpoAddress, RpoEntityDetail } from './types'
+import { urcStav } from '../../../lib/stavSubjektu'
 
 export interface MunicipalityGeo {
   districtKod: string
@@ -130,6 +131,11 @@ export async function upsertBusinessEntity(
     return
   }
 
+  // Pozor: pozastavenie živnosti má koniec (suspendedTo), ktorý RPO
+  // nemusí poslať ako zmenu v dennej dávke. Stav je preto presný k dátumu
+  // posledného importu subjektu; mesačný bulk import ho prepočíta celý.
+  const stav = urcStav(detail, new Date().toISOString().slice(0, 10))
+
   await prisma.businessEntity.upsert({
     where: { id: BigInt(detail.id) },
     create: {
@@ -146,6 +152,7 @@ export async function upsertBusinessEntity(
       pravnaFormaKod,
       datumVzniku: detail.establishment ? new Date(detail.establishment) : undefined,
       datumZaniku: detail.termination ? new Date(detail.termination) : undefined,
+      stav,
       zdrojDat: 'RPO',
     },
     update: {
@@ -174,6 +181,7 @@ export async function upsertBusinessEntity(
       // actually clear it locally rather than leaving the entity
       // stuck as inactive (or vice versa).
       datumZaniku: null,
+      stav,
       lastSyncedAt: new Date(),
     },
   })

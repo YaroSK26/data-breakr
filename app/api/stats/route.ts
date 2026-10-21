@@ -32,7 +32,7 @@ export async function GET() {
     prisma.$queryRaw<LegalFormRow[]>(Prisma.sql`
       SELECT COALESCE(pravna_forma_kod, 'NEUVEDENE') AS kod, COUNT(*)::bigint AS pocet
       FROM business_entities
-      WHERE datum_zaniku IS NULL
+      WHERE stav = 'aktivny'
       GROUP BY pravna_forma_kod
       ORDER BY pocet DESC
     `),

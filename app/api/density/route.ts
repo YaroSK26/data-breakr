@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const naceCodes = nace ? await resolveNaceFilter(prisma, nace) : [];
 
   const filters = Prisma.sql`
-    be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
+    be."stav" = 'aktivny' AND be."okres_kod" IS NOT NULL
     ${naceCodes.length > 0 ? Prisma.sql`AND be."nace_kod4" IN (${Prisma.join(naceCodes)})` : Prisma.empty}
     ${kraj ? Prisma.sql`AND be."kraj_kod" = ${kraj}` : Prisma.empty}
     ${pravneFormy.length ? Prisma.sql`AND be."pravna_forma_kod" IN (${Prisma.join(pravneFormy)})` : Prisma.empty}

@@ -55,7 +55,7 @@ export function DataSourceBanner({ sources, activeCount, note }: DataSourceBanne
         </span>
       ))}
       <span style={{ marginLeft: "auto", fontStyle: "italic" }}>
-        Zahŕňa všetky firmy vrátane živnostníkov (RPO).
+        Len aktívne firmy a živnostníci - bez likvidácie, konkurzu, pozastavených živností a spolkov.
       </span>
       {note && (
         <p

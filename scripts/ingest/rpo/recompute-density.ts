@@ -27,7 +27,7 @@ export async function recomputeDensity(prisma: PrismaClient) {
       FROM municipalities
       GROUP BY district_kod
     ) dp ON dp.district_kod = be."okres_kod"
-    WHERE be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
+    WHERE be."stav" = 'aktivny' AND be."okres_kod" IS NOT NULL
     GROUP BY be."okres_kod", COALESCE(be."nace_kod4", ''), dp.population
     ON CONFLICT (area_kod, granularity, nace_kod4, snapshot_date)
     DO UPDATE SET

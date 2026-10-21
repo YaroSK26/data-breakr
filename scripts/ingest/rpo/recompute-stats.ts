@@ -2,7 +2,8 @@
 //
 // Computes the /statistiky aggregates once and caches them - see
 // StatsCache model comment in schema.prisma for why.
-import type { PrismaClient } from '@prisma/client'
+import { Prisma, type PrismaClient } from '@prisma/client'
+import { PERSON_TYPE_CODES } from '../../../lib/legalForms'
 
 interface DistrictCountRow {
   okresKod: string
@@ -16,22 +17,45 @@ interface CategoryCountRow {
   pocet: bigint
 }
 
+interface StavRow {
+  stav: string
+  pocet: bigint
+}
+
 interface YearRow {
   rok: number
   pocet: bigint
 }
 
 export async function recomputeStats(prisma: PrismaClient) {
-  const [totalActive, terminatedAgg, allDistrictCounts, byCategory, byYearRaw] = await Promise.all([
-    prisma.businessEntity.count({ where: { datumZaniku: null } }),
+  const [[{ totalActive, aktivnychPravnickych }], podlaStavuRaw, terminatedAgg, allDistrictCounts, byCategory, byYearRaw] = await Promise.all([
+    // Počíta sa IČO, nie riadok: ~22 tis. ľudí má v RPO dva záznamy (živnosť
+    // a slobodné povolanie pod tým istým IČO) a firmou sú raz. Rovnako sa
+    // počítajú okresy a odvetvia nižšie, aby čísla na stránke sedeli.
+    // Právnické osoby zvlášť - porovnávajú sa so ŠÚ SR, ktorý živnostníkov
+    // do "podnikov" nepočíta.
+    prisma.$queryRaw<{ totalActive: number; aktivnychPravnickych: number }[]>`
+      SELECT
+        COUNT(DISTINCT COALESCE(ico, id::text))::int AS "totalActive",
+        COUNT(DISTINCT COALESCE(ico, id::text)) FILTER (
+          WHERE pravna_forma_kod NOT IN (${Prisma.join([...PERSON_TYPE_CODES.fyzicke])})
+        )::int AS "aktivnychPravnickych"
+      FROM business_entities WHERE stav = 'aktivny'
+    `,
+    // Rozpis všetkého, čo v RPO nemá dátum zániku - stránka ho ukazuje, aby
+    // bolo vidno, čo sa do aktívnych nezapočítalo a prečo.
+    prisma.$queryRaw<StavRow[]>`
+      SELECT stav, COUNT(*)::bigint AS pocet FROM business_entities GROUP BY stav
+    `,
     // Zaniknuté subjekty už v business_entities nie sú (viď
     // prune-defunct-entities.ts), ich počet drží agregát.
     prisma.zaniknuteAgg.aggregate({ _sum: { pocet: true } }),
     prisma.$queryRaw<DistrictCountRow[]>`
-      SELECT be."okres_kod" AS "okresKod", d.nazov_sk AS "nazovSk", COUNT(*) AS pocet
+      SELECT be."okres_kod" AS "okresKod", d.nazov_sk AS "nazovSk",
+             COUNT(DISTINCT COALESCE(be.ico, be.id::text)) AS pocet
       FROM business_entities be
       JOIN districts d ON d.kod = be."okres_kod"
-      WHERE be."datum_zaniku" IS NULL AND be."okres_kod" IS NOT NULL
+      WHERE be."stav" = 'aktivny' AND be."okres_kod" IS NOT NULL
       GROUP BY be."okres_kod", d.nazov_sk
     `,
     // Named from nace21_codes (NACE Rev. 2.1), the revision RPO codes these
@@ -41,10 +65,11 @@ export async function recomputeStats(prisma: PrismaClient) {
     // 4335, 7020, 4100), so the chart silently showed 7th-18th place as if
     // it were 1st-12th.
     prisma.$queryRaw<CategoryCountRow[]>`
-      SELECT be."nace_kod4" AS kod4, COALESCE(nc.nazov_sk, be."nace_kod4") AS nazov, COUNT(*) AS pocet
+      SELECT be."nace_kod4" AS kod4, COALESCE(nc.nazov_sk, be."nace_kod4") AS nazov,
+             COUNT(DISTINCT COALESCE(be.ico, be.id::text)) AS pocet
       FROM business_entities be
       LEFT JOIN nace21_codes nc ON nc.kod = be."nace_kod4" AND nc.uroven = 4
-      WHERE be."datum_zaniku" IS NULL AND be."nace_kod4" IS NOT NULL
+      WHERE be."stav" = 'aktivny' AND be."nace_kod4" IS NOT NULL
       GROUP BY be."nace_kod4", nc.nazov_sk
       ORDER BY pocet DESC
       LIMIT 12
@@ -93,8 +118,16 @@ export async function recomputeStats(prisma: PrismaClient) {
     .sort((a, b) => b.pocet - a.pocet)
     .slice(0, 15)
 
+  const podlaStavu = Object.fromEntries(podlaStavuRaw.map((r) => [r.stav, Number(r.pocet)]))
+  const bezZaniku = podlaStavuRaw.reduce((sum, r) => sum + Number(r.pocet), 0)
+
   const data = {
     totalActive,
+    // Záznamy v RPO bez dátumu zániku - toto číslo appka predtým
+    // vydávala za "aktívne firmy".
+    bezZaniku,
+    podlaStavu,
+    aktivnychPravnickych,
     totalTerminated,
     byDistrict,
     byCategory: byCategory.map((r) => ({ kod4: r.kod4, nazov: r.nazov ?? r.kod4, pocet: Number(r.pocet) })),

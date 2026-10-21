@@ -42,6 +42,6 @@ describe('recomputeDensity', () => {
 
     await recomputeDensity(prisma as never)
 
-    expect(prisma._sql()).toContain(`be."datum_zaniku" IS NULL`)
+    expect(prisma._sql()).toContain(`be."stav" = 'aktivny'`)
   })
 })

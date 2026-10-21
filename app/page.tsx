@@ -9,6 +9,8 @@ import { Hero } from "@/components/Hero";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { LegalFormsMultiSelect } from "@/components/LegalFormsMultiSelect";
 import { LEGAL_FORMS, PERSON_TYPE_CODES, type PersonType } from "@/lib/legalForms";
+import type { Stav } from "@/lib/stavSubjektu";
+import { AktivneFirmyBanner } from "@/components/AktivneFirmyBanner";
 import type { Metric, DistrictDensity } from "@/components/DensityMap";
 
 const DensityMap = dynamic(
@@ -70,6 +72,8 @@ const LEGAL_PERSON_FORM_CODES: string[] = LEGAL_FORMS
 
 export interface Stats {
   totalActive: number;
+  bezZaniku?: number;
+  podlaStavu?: Partial<Record<Stav, number>>;
   totalTerminated: number;
   byDistrict: { nazov: string; pocet: number }[];
   byCategory: { kod4: string; nazov: string; pocet: number }[];
@@ -500,7 +504,7 @@ function MapaHustotyFiriem() {
                 }}
               >
                 <StatCard
-                  label="Aktívnych firiem"
+                  label="Aktívnych firiem a živnostníkov"
                   value={stats.totalActive.toLocaleString("sk-SK")}
                   color="#2563eb"
                 />
@@ -520,6 +524,13 @@ function MapaHustotyFiriem() {
                   color="#7c3aed"
                 />
               </div>
+              {stats.podlaStavu && stats.bezZaniku != null && (
+                <AktivneFirmyBanner
+                  totalActive={stats.totalActive}
+                  bezZaniku={stats.bezZaniku}
+                  podlaStavu={stats.podlaStavu}
+                />
+              )}
               <StatsCharts stats={stats} />
             </>
           )}

@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
   const filters = Prisma.sql`
     okres_kod = ${okres}
-    AND datum_zaniku IS NULL
+    AND stav = 'aktivny'
     ${naceCodes.length > 0 ? Prisma.sql`AND nace_kod4 IN (${Prisma.join(naceCodes)})` : Prisma.empty}
     ${formy.length ? Prisma.sql`AND pravna_forma_kod IN (${Prisma.join(formy)})` : Prisma.empty}
     ${!formy.length && typ === 'fyzicke' ? Prisma.sql`AND pravna_forma_kod IN (${Prisma.join(fyzickeKody)})` : Prisma.empty}
