@@ -372,9 +372,8 @@ export function ZaniknuteFirmySection() {
             color: "#64748b",
           }}
         >
-          Podiel = zaniknuté / (zaniknuté + dnes aktívne) v okrese. Farba obce
-          zodpovedá hodnote jej okresu - zaniknuté subjekty evidujeme len po
-          okres, nie po obec.
+          Podiel = zaniknuté / (zaniknuté + dnes aktívne) v okrese. Zaniknuté
+          subjekty evidujeme len po okres, nie po obec.
         </p>
       </section>
 

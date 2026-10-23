@@ -19,11 +19,10 @@ import { Client } from 'pg'
 config({ path: '.env.local' })
 
 const BATCH = 50_000
-// Indexy, ktoré appka nepoužíva - IČO sa nikde nevyhľadáva (zoznam firiem
-// dedupuje cez DISTINCT ON, nie cez index) a dátum vzniku ide po zmene
-// štatistík z vznik_agg. Mažú sa PRED DELETE: uvoľnené miesto potrebuje
-// VACUUM FULL na dočasnú kópiu tabuľky.
-const DROP_INDEXES = ['business_entities_ico_idx', 'business_entities_datum_vzniku_idx']
+// Index dátumu vzniku appka po zmene štatistík nepoužíva. Maže sa PRED
+// DELETE: uvoľnené miesto potrebuje VACUUM FULL na dočasnú kópiu tabuľky.
+// Index IČO musí zostať: týždenný outreach podľa neho overuje firmy.
+const DROP_INDEXES = ['business_entities_datum_vzniku_idx']
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run')

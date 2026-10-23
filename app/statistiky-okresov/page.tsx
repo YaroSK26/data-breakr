@@ -1,5 +1,6 @@
 "use client";
 
+import { AkcioveSpolocnostiSection } from "@/components/AkcioveSpolocnostiSection";
 import { StatistikyOkresovSection } from "@/components/StatistikyOkresovSection";
 
 export default function StatistikyOkresovPage() {
@@ -13,6 +14,7 @@ export default function StatistikyOkresovPage() {
       }}
     >
       <StatistikyOkresovSection />
+      <AkcioveSpolocnostiSection />
     </main>
   );
 }

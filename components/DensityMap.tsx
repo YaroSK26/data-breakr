@@ -8,12 +8,11 @@ import 'leaflet/dist/leaflet.css'
 
 export type Metric = 'absolute' | 'perCapita' | 'dphShare'
 
-interface MunicipalityProps {
+// Dáta sú len po okresy, takže mapa kreslí okresy, nie obce - inak by
+// farba „skákala“ medzi obcami, hoci každá obec len opakuje číslo okresu.
+interface DistrictProps {
   kod: string
   nazov: string
-  okresKod: string
-  okresNazov: string
-  population: number | null
 }
 
 export interface DistrictDensity {
@@ -97,20 +96,14 @@ export function DensityMap({
   selectedRegionCode = '',
 }: DensityMapProps) {
   const [mapMode, setMapMode] = useState<'data' | 'base'>('data')
-  const [hovered, setHovered] = useState<(MunicipalityProps & DistrictDensity) | null>(null)
-  const [geoData, setGeoData] = useState<FeatureCollection | null>(null)
+  const [hovered, setHovered] = useState<(DistrictProps & DistrictDensity) | null>(null)
   const [districtBoundaries, setDistrictBoundaries] = useState<FeatureCollection | null>(null)
   const [regionBoundaries, setRegionBoundaries] = useState<FeatureCollection | null>(null)
 
-  // Municipality shapes and district outlines are both static - fetched
-  // once on mount, independent of the NACE/metric filter. Only the
-  // density VALUES (densityByDistrict, passed as a prop) change per filter.
+  // District shapes are static - fetched once on mount, independent of the
+  // NACE/metric filter. Only the density VALUES (densityByDistrict, passed
+  // as a prop) change per filter.
   useEffect(() => {
-    fetch('/api/municipalities-geo')
-      .then((r) => r.json())
-      .then((d) => setGeoData(d))
-      .catch(() => setGeoData(null))
-
     fetch('/api/district-boundaries')
       .then((r) => r.json())
       .then((d) => setDistrictBoundaries(d))
@@ -155,21 +148,21 @@ export function DensityMap({
     }
   }, [regionBoundaries, selectedRegionCode])
 
-  const style: StyleFunction<MunicipalityProps> = (feature) => {
-    const p = feature?.properties as MunicipalityProps | undefined
-    const value = p ? valueFor(p.okresKod) : null
+  const style: StyleFunction<DistrictProps> = (feature) => {
+    const p = feature?.properties as DistrictProps | undefined
+    const value = p ? valueFor(p.kod) : null
     return {
       fillColor: colorFor(value, scaleMin, scaleMax),
       fillOpacity: 0.85,
-      color: '#94a3b8',
-      weight: 0.5,
+      color: '#475569',
+      weight: 1.2,
     }
   }
 
-  const onEachFeature = (feature: Feature<Geometry, MunicipalityProps>, layer: Layer) => {
+  const onEachFeature = (feature: Feature<Geometry, DistrictProps>, layer: Layer) => {
     layer.on({
       mouseover: () => {
-        const d = densityByDistrict?.[feature.properties.okresKod]
+        const d = densityByDistrict?.[feature.properties.kod]
         setHovered({
           ...feature.properties,
           pocetPrevadzok: d?.pocetPrevadzok ?? 0,
@@ -178,7 +171,7 @@ export function DensityMap({
         })
       },
       mouseout: () => setHovered(null),
-      click: () => onDistrictClick?.(feature.properties.okresKod, feature.properties.okresNazov),
+      click: () => onDistrictClick?.(feature.properties.kod, feature.properties.nazov),
     })
   }
 
@@ -197,28 +190,12 @@ export function DensityMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {geoData && mapMode === 'data' && (
-          <GeoJSON
-            key={`${metric}-${scaleMin}-${scaleMax}`}
-            data={geoData}
-            style={style as StyleFunction}
-            onEachFeature={onEachFeature as (feature: Feature, layer: Layer) => void}
-          />
-        )}
         {districtBoundaries && mapMode === 'data' && (
           <GeoJSON
-            key="district-boundaries"
+            key={`${metric}-${scaleMin}-${scaleMax}`}
             data={districtBoundaries}
-            // Decoration only - no fill, non-interactive so clicks pass
-            // through to the municipality polygon underneath. Given its own
-            // named pane with a fixed high zIndex so it always renders on
-            // top of the municipality fill layer regardless of which layer
-            // Leaflet happens to have (re)added most recently - without
-            // this, re-adding the fill layer on every metric/category
-            // change (its `key` changes) pushed it above the boundary
-            // layer, making the district outlines flicker in and out.
-            pane="districtBoundaryPane"
-            style={() => ({ fill: false, color: '#475569', weight: 1.8, interactive: false })}
+            style={style as StyleFunction}
+            onEachFeature={onEachFeature as (feature: Feature, layer: Layer) => void}
           />
         )}
         {selectedRegionBoundary && mapMode === 'data' && (
@@ -345,8 +322,7 @@ export function DensityMap({
             zIndex: 1000,
           }}
         >
-          <strong>{hovered.nazov}</strong>
-          <div style={{ color: '#64748b' }}>okres {hovered.okresNazov}</div>
+          <strong>okres {hovered.nazov}</strong>
           <div style={{ marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
             {popisHodnoty}: <strong>{hovered.pocetPrevadzok.toLocaleString('sk-SK')}</strong>
           </div>
@@ -375,8 +351,8 @@ export function DensityMap({
 }
 
 // Registers a custom Leaflet pane with a fixed zIndex above the default
-// overlayPane (400), so the district boundary layer always draws on top
-// regardless of DOM/add order.
+// overlayPane (400), so the selected-region outline always draws on top of
+// the district fill regardless of DOM/add order.
 function DistrictBoundaryPane() {
   const map = useMap()
   useEffect(() => {

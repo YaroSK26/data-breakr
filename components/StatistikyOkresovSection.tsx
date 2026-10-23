@@ -277,9 +277,8 @@ export function StatistikyOkresovSection() {
             color: "#64748b",
           }}
         >
-          Dáta dostupné pre {data?.okresy.length ?? 0} z 79 okresov. Farba
-          obce zodpovedá hodnote jej okresu - ŠÚ SR tieto ukazovatele
-          zverejňuje po okresy, nie po obce. Zvyšné okresy sú biele: pri
+          Dáta dostupné pre {data?.okresy.length ?? 0} z 79 okresov. ŠÚ SR tieto
+          ukazovatele zverejňuje po okresy, nie po obce. Zvyšné okresy sú biele: pri
           malom počte podnikov v danom odvetví ŠÚ SR hodnotu netají len na
           mape, ale ju vôbec nezverejní (napr. „B - Ťažba a dobývanie" má v
           mnohých okresoch nula alebo len pár podnikov).
